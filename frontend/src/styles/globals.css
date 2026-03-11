@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-jazari-gold: #C5A55A;
+  --color-jazari-gold-light: #D4B96E;
+  --color-jazari-dark: #0D0D0D;
+  --color-jazari-surface: #1A1A1A;
+  --color-jazari-surface-light: #2A2A2A;
+  --color-jazari-text: #E5E5E5;
+  --color-jazari-text-dim: #888888;
+}
+
+body {
+  background-color: var(--color-jazari-dark);
+  color: var(--color-jazari-text);
+  font-family: 'Inter', system-ui, sans-serif;
+  margin: 0;
+}
