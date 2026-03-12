@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jazari — AI Life Coach Architecture</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --bg-card: #141414;
+    --bg-card-hover: #1a1a1a;
+    --gold: #c5a55a;
+    --gold-dim: #8a7340;
+    --gold-glow: rgba(197, 165, 90, 0.15);
+    --gold-glow-strong: rgba(197, 165, 90, 0.25);
+    --text: #e8e4dc;
+    --text-dim: #9a9590;
+    --text-bright: #f5f0e8;
+    --border: #2a2520;
+    --border-gold: rgba(197, 165, 90, 0.3);
+    --memory-bg: #1a1610;
+    --memory-border: rgba(197, 165, 90, 0.5);
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .header h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-bright);
+    margin-bottom: 0.3rem;
+  }
+
+  .header h1 span {
+    color: var(--gold);
+  }
+
+  .header .subtitle {
+    font-size: 1rem;
+    color: var(--text-dim);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── Main Flow Grid ── */
+  .flow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1.1fr auto 1.5fr auto 1.1fr;
+    align-items: start;
+    gap: 0;
+    max-width: 1500px;
+    margin: 0 auto 2.5rem;
+  }
+
+  /* ── Card (generic component box) ── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem 1.2rem;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+
+  .card:hover {
+    border-color: var(--border-gold);
+    background: var(--bg-card-hover);
+  }
+
+  .card-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .card-label .icon {
+    font-size: 0.85rem;
+    display: inline-flex;
+    width: 1.3rem;
+    height: 1.3rem;
+    align-items: center;
+    justify-content: center;
+    background: var(--gold-glow);
+    border-radius: 5px;
+    color: var(--gold);
+    font-weight: 700;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 0.65rem;
+  }
+
+  .card-tech {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-bottom: 0.85rem;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .card-items {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .card-items li {
+    font-size: 0.78rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.6rem;
+    background: rgba(255,255,255,0.025);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .card-items li .bullet {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    flex-shrink: 0;
+  }
+
+  .card-items li.highlight-item {
+    border-color: var(--border-gold);
+    background: var(--gold-glow);
+  }
+
+  .card-items li .item-label {
+    color: var(--text-dim);
+    font-size: 0.68rem;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* ── Arrow connectors ── */
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.3rem;
+    min-height: 200px;
+  }
+
+  .arrow-line {
+    width: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .arrow-line .line {
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    position: relative;
+  }
+
+  .arrow-line .line::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 7px solid var(--gold);
+  }
+
+  .arrow-label {
+    font-size: 0.58rem;
+    color: var(--gold-dim);
+    writing-mode: horizontal-tb;
+    text-align: center;
+    max-width: 55px;
+    line-height: 1.3;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Memory System (highlighted) ── */
+  .card.memory-card {
+    background: var(--memory-bg);
+    border: 2px solid var(--memory-border);
+    box-shadow:
+      0 0 30px rgba(197, 165, 90, 0.08),
+      0 0 60px rgba(197, 165, 90, 0.04),
+      inset 0 1px 0 rgba(197, 165, 90, 0.1);
+    padding: 1.5rem 1.3rem;
+  }
+
+  .card.memory-card:hover {
+    border-color: var(--gold);
+    box-shadow:
+      0 0 40px rgba(197, 165, 90, 0.12),
+      0 0 80px rgba(197, 165, 90, 0.06),
+      inset 0 1px 0 rgba(197, 165, 90, 0.15);
+  }
+
+  .memory-card .card-label {
+    font-size: 0.7rem;
+  }
+
+  .memory-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    padding: 0.15rem 0.5rem;
+    background: var(--gold);
+    color: var(--bg);
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-left: 0.4rem;
+  }
+
+  .formula-box {
+    margin-top: 0.7rem;
+    padding: 0.65rem 0.8rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border-gold);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .formula-box .formula-label {
+    font-size: 0.6rem;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.35rem;
+  }
+
+  .formula-box .formula {
+    font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 1rem;
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  .formula-box .formula-note {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+  }
+
+  /* ── Proactive Follow-up Return Arrow ── */
+  .return-arrow-section {
+    max-width: 1500px;
+    margin: 0 auto 2.5rem;
+    position: relative;
+  }
+
+  .return-arrow-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 0;
+  }
+
+  .return-arrow-track {
+    width: 85%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-dim) 30%, var(--gold-dim) 70%, var(--gold));
+    position: relative;
+    border-radius: 1px;
+  }
+
+  .return-arrow-track::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 7px solid var(--gold);
+  }
+
+  .return-arrow-label {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg);
+    padding: 0.25rem 0.8rem;
+    font-size: 0.68rem;
+    color: var(--gold);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--border-gold);
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* ── Sub-agents Row ── */
+  .subagents-section {
+    max-width: 1500px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .subagents-header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .subagents-header .label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+  }
+
+  .subagents-header .connector {
+    width: 2px;
+    height: 20px;
+    background: var(--gold-dim);
+    margin: 0.3rem auto;
+  }
+
+  .subagents-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.8rem;
+  }
+
+  .subagent {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+
+  .subagent:hover {
+    border-color: var(--border-gold);
+    transform: translateY(-2px);
+  }
+
+  .subagent .sa-icon {
+    width: 2.2rem;
+    height: 2.2rem;
+    margin: 0 auto 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+
+  .subagent .sa-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 0.25rem;
+  }
+
+  .subagent .sa-desc {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .sa-memory { background: rgba(197, 165, 90, 0.15); color: var(--gold); }
+  .sa-career { background: rgba(100, 180, 255, 0.12); color: #64b4ff; }
+  .sa-health { background: rgba(100, 220, 150, 0.12); color: #64dc96; }
+  .sa-finance { background: rgba(220, 180, 100, 0.12); color: #dcb464; }
+  .sa-discipline { background: rgba(180, 130, 220, 0.12); color: #b482dc; }
+
+  /* ── Google Cloud Row ── */
+  .cloud-section {
+    max-width: 1500px;
+    margin: 0 auto 2rem;
+  }
+
+  .cloud-header {
+    text-align: center;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+
+  .cloud-header .line {
+    flex: 1;
+    max-width: 200px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  .cloud-header .label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .cloud-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.8rem;
+  }
+
+  .cloud-service {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    transition: border-color 0.3s;
+  }
+
+  .cloud-service:hover {
+    border-color: var(--border-gold);
+  }
+
+  .cloud-service .cs-icon {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(100, 180, 255, 0.1);
+    color: #5ca8e6;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .cloud-service .cs-info .cs-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-bright);
+  }
+
+  .cloud-service .cs-info .cs-desc {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+
+  .footer p {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.03em;
+  }
+
+  .footer .tech-tags {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+  }
+
+  .footer .tech-tag {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.55rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── SVG Icons ── */
+  .svg-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.1em;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1200px) {
+    .flow {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .arrow-col {
+      min-height: auto;
+      padding: 0.5rem 0;
+      transform: rotate(90deg);
+    }
+    .subagents-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .cloud-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .header h1 { font-size: 1.6rem; }
+    .subagents-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .cloud-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── Print ── */
+  @media print {
+    body {
+      background: white;
+      color: #1a1a1a;
+      padding: 1cm;
+    }
+    .card, .subagent, .cloud-service {
+      background: #f8f8f8;
+      border-color: #ddd;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .card.memory-card {
+      background: #fdf8ee;
+      border-color: var(--gold);
+    }
+    .header h1 { color: #1a1a1a; }
+    .card-label, .formula-box .formula { color: #8a6d20; }
+    .card-items li { background: #f0f0f0; border-color: #e0e0e0; }
+    .return-arrow-label { background: white; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ════ Header ════ -->
+  <header class="header">
+    <h1><span>Jazari</span> — AI Life Coach Architecture</h1>
+    <p class="subtitle">Google ADK Hackathon 2025 &middot; Multimodal Memory-Driven Agent System</p>
+  </header>
+
+  <!-- ════ Main Flow ════ -->
+  <section class="flow">
+
+    <!-- ── 1. User ── -->
+    <div class="card">
+      <div class="card-label">
+        <span class="icon">U</span>
+        Input Layer
+      </div>
+      <div class="card-title">User</div>
+      <div class="card-tech">Mobile / Desktop</div>
+      <ul class="card-items">
+        <li>
+          <span class="bullet"></span>
+          Voice
+          <span class="item-label">Gemini Live</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Photos
+          <span class="item-label">Camera</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Text
+          <span class="item-label">Chat</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Arrow 1→2 -->
+    <div class="arrow-col">
+      <div class="arrow-line">
+        <div class="line"></div>
+      </div>
+      <div class="arrow-label">WS + REST</div>
+    </div>
+
+    <!-- ── 2. Frontend ── -->
+    <div class="card">
+      <div class="card-label">
+        <span class="icon">F</span>
+        Presentation
+      </div>
+      <div class="card-title">Frontend</div>
+      <div class="card-tech">React + Vite + TypeScript</div>
+      <ul class="card-items">
+        <li>
+          <span class="bullet"></span>
+          WebSocket
+          <span class="item-label">Audio/Text</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          REST API
+          <span class="item-label">Media Upload</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          PWA
+          <span class="item-label">Installable</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Arrow 2→3 -->
+    <div class="arrow-col">
+      <div class="arrow-line">
+        <div class="line"></div>
+      </div>
+      <div class="arrow-label">HTTPS</div>
+    </div>
+
+    <!-- ── 3. Backend ── -->
+    <div class="card">
+      <div class="card-label">
+        <span class="icon">B</span>
+        Orchestration
+      </div>
+      <div class="card-title">Backend</div>
+      <div class="card-tech">FastAPI &middot; Cloud Run</div>
+      <ul class="card-items">
+        <li class="highlight-item">
+          <span class="bullet"></span>
+          ADK Runner
+          <span class="item-label">Gemini 2.5 Flash</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Root Agent
+          <span class="item-label">Orchestrator</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          5 Sub-Agents
+          <span class="item-label">Specialist</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Session Mgmt
+          <span class="item-label">Firestore</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Arrow 3→4 -->
+    <div class="arrow-col">
+      <div class="arrow-line">
+        <div class="line"></div>
+      </div>
+      <div class="arrow-label">Tool Calls</div>
+    </div>
+
+    <!-- ── 4. Memory System ── -->
+    <div class="card memory-card">
+      <div class="card-label">
+        <span class="icon">M</span>
+        Core Intelligence
+        <span class="memory-badge">Differentiator</span>
+      </div>
+      <div class="card-title">Memory System</div>
+      <div class="card-tech">LanceDB &middot; Gemini Embedding</div>
+      <ul class="card-items">
+        <li class="highlight-item">
+          <span class="bullet"></span>
+          MemoryStore
+          <span class="item-label">LanceDB</span>
+        </li>
+        <li class="highlight-item">
+          <span class="bullet"></span>
+          Embeddings
+          <span class="item-label">768-dim vectors</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Multimodal
+          <span class="item-label">Text+Image+Audio</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Importance Score
+          <span class="item-label">Gemini Flash</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Decay Curve
+          <span class="item-label">Ebbinghaus</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Cross-Modal Search
+          <span class="item-label">Semantic</span>
+        </li>
+      </ul>
+      <div class="formula-box">
+        <div class="formula-label">Ebbinghaus Forgetting Curve</div>
+        <div class="formula">retention = e<sup>-t/S</sup></div>
+        <div class="formula-note">t = time elapsed &middot; S = memory strength</div>
+      </div>
+    </div>
+
+    <!-- Arrow 4→5 -->
+    <div class="arrow-col">
+      <div class="arrow-line">
+        <div class="line"></div>
+      </div>
+      <div class="arrow-label">Persist</div>
+    </div>
+
+    <!-- ── 5. Google Cloud ── -->
+    <div class="card">
+      <div class="card-label">
+        <span class="icon">G</span>
+        Infrastructure
+      </div>
+      <div class="card-title">Google Cloud</div>
+      <div class="card-tech">GCP Platform</div>
+      <ul class="card-items">
+        <li>
+          <span class="bullet"></span>
+          Cloud Run
+          <span class="item-label">Backend</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Firestore
+          <span class="item-label">Data + Backup</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Cloud Storage
+          <span class="item-label">Media Files</span>
+        </li>
+        <li>
+          <span class="bullet"></span>
+          Secret Manager
+          <span class="item-label">API Keys</span>
+        </li>
+      </ul>
+    </div>
+
+  </section>
+
+  <!-- ════ Proactive Follow-up Return Arrow ════ -->
+  <section class="return-arrow-section">
+    <div class="return-arrow-container">
+      <div class="return-arrow-track">
+        <span class="return-arrow-label">Proactive Follow-up &middot; Memory &rarr; User</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ Sub-Agents Detail ════ -->
+  <section class="subagents-section">
+    <div class="subagents-header">
+      <div class="connector"></div>
+      <div class="label">Root Agent delegates to 5 Specialist Sub-Agents</div>
+      <div class="connector"></div>
+    </div>
+    <div class="subagents-grid">
+      <div class="subagent">
+        <div class="sa-icon sa-memory">M</div>
+        <div class="sa-name">Memory Agent</div>
+        <div class="sa-desc">Store, recall, search across all modalities. Importance scoring &amp; decay.</div>
+      </div>
+      <div class="subagent">
+        <div class="sa-icon sa-career">C</div>
+        <div class="sa-name">Career Agent</div>
+        <div class="sa-desc">Goal tracking, skill gap analysis, interview prep, career roadmaps.</div>
+      </div>
+      <div class="subagent">
+        <div class="sa-icon sa-health">H</div>
+        <div class="sa-name">Health Agent</div>
+        <div class="sa-desc">Nutrition tracking, exercise plans, sleep patterns, wellness insights.</div>
+      </div>
+      <div class="subagent">
+        <div class="sa-icon sa-finance">F</div>
+        <div class="sa-name">Finance Agent</div>
+        <div class="sa-desc">Budget tracking, expense analysis, savings goals, financial literacy.</div>
+      </div>
+      <div class="subagent">
+        <div class="sa-icon sa-discipline">D</div>
+        <div class="sa-name">Discipline Agent</div>
+        <div class="sa-desc">Habit formation, accountability, streak tracking, behavioral nudges.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ Google Cloud Services Detail ════ -->
+  <section class="cloud-section">
+    <div class="cloud-header">
+      <div class="line"></div>
+      <div class="label">Google Cloud Platform Services</div>
+      <div class="line"></div>
+    </div>
+    <div class="cloud-grid">
+      <div class="cloud-service">
+        <div class="cs-icon">CR</div>
+        <div class="cs-info">
+          <div class="cs-name">Cloud Run</div>
+          <div class="cs-desc">Serverless container hosting for FastAPI backend</div>
+        </div>
+      </div>
+      <div class="cloud-service">
+        <div class="cs-icon">FS</div>
+        <div class="cs-info">
+          <div class="cs-name">Firestore</div>
+          <div class="cs-desc">Structured data, sessions &amp; LanceDB backup</div>
+        </div>
+      </div>
+      <div class="cloud-service">
+        <div class="cs-icon">CS</div>
+        <div class="cs-info">
+          <div class="cs-name">Cloud Storage</div>
+          <div class="cs-desc">Photos, voice notes &amp; media file storage</div>
+        </div>
+      </div>
+      <div class="cloud-service">
+        <div class="cs-icon">SM</div>
+        <div class="cs-info">
+          <div class="cs-name">Secret Manager</div>
+          <div class="cs-desc">Secure API key &amp; credential management</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ Footer ════ -->
+  <footer class="footer">
+    <p>Built with Google Agent Development Kit (ADK) &middot; Gemini 2.5 Flash &middot; Gemini Embedding 2</p>
+    <div class="tech-tags">
+      <span class="tech-tag">Python 3.12</span>
+      <span class="tech-tag">FastAPI</span>
+      <span class="tech-tag">google-adk</span>
+      <span class="tech-tag">LanceDB</span>
+      <span class="tech-tag">React 19</span>
+      <span class="tech-tag">TypeScript</span>
+      <span class="tech-tag">Vite</span>
+      <span class="tech-tag">Cloud Run</span>
+      <span class="tech-tag">Firestore</span>
+    </div>
+  </footer>
+
+</body>
+</html>
