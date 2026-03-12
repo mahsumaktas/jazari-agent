@@ -13,7 +13,7 @@ import asyncio
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -25,7 +25,39 @@ from google.adk.memory import InMemoryMemoryService
 
 from agents.root_agent import root_agent, root_agent_with_subs
 
-app = FastAPI(title="Jazari Agent")
+import base64
+from contextlib import asynccontextmanager
+from google.cloud import storage as gcs
+
+GCS_BUCKET = "jazari-media"
+_gcs_client = None
+
+def get_gcs_client():
+    global _gcs_client
+    if _gcs_client is None:
+        _gcs_client = gcs.Client()
+    return _gcs_client
+
+def upload_to_gcs(user_id: str, data: bytes, ext: str) -> str:
+    import uuid as _uuid
+    blob_name = f"{user_id}/{_uuid.uuid4()}.{ext}"
+    bucket = get_gcs_client().bucket(GCS_BUCKET)
+    blob = bucket.blob(blob_name)
+    content_type = "image/jpeg" if ext in ("jpg", "jpeg") else "audio/wav"
+    blob.upload_from_string(data, content_type=content_type)
+    return f"gs://{GCS_BUCKET}/{blob_name}"
+
+@asynccontextmanager
+async def lifespan(app):
+    try:
+        from memory.backup import restore_from_firestore
+        result = restore_from_firestore()
+        print(f"[startup] LanceDB restore: {result}")
+    except Exception as e:
+        print(f"[startup] LanceDB restore skipped: {e}")
+    yield
+
+app = FastAPI(title="Jazari Agent", lifespan=lifespan)
 
 # Shared services — memory service enables cross-session recall
 session_service = InMemorySessionService()
@@ -107,6 +139,36 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
                     "agent": "jazari",
                 })
 
+            elif msg.get("type") == "media":
+                from tools.memory_tools import store_media_memory
+
+                modality = msg.get("modality", "image")
+                media_bytes = base64.b64decode(msg.get("data", ""))
+                description = msg.get("description", "")
+                ext = "jpg" if modality == "image" else "wav"
+
+                try:
+                    media_uri = upload_to_gcs(userId, media_bytes, ext)
+                except Exception:
+                    media_uri = ""
+
+                memory_type = "visual" if modality == "image" else "audio"
+                result = await store_media_memory(
+                    user_id=userId,
+                    memory_type=memory_type,
+                    content=description,
+                    media_bytes=media_bytes,
+                    modality=modality,
+                    media_uri=media_uri,
+                )
+
+                await websocket.send_json({
+                    "type": "media_stored",
+                    "content": result.get("message", "Memory stored"),
+                    "memory_id": result.get("memory_id"),
+                    "description": result.get("content", ""),
+                })
+
     except WebSocketDisconnect:
         pass
 
@@ -163,6 +225,35 @@ async def websocket_audio(websocket: WebSocket, userId: str = "anonymous"):
             event_task.cancel()
         await bridge.close()
         print(f"[audio] Session cleaned up")
+
+
+@app.post("/api/media-memory")
+async def upload_media_memory(request: Request):
+    """Upload photo or audio and store as memory."""
+    from tools.memory_tools import store_media_memory
+
+    body = await request.json()
+    user_id = body["user_id"]
+    modality = body["modality"]
+    media_bytes = base64.b64decode(body["data"])
+    description = body.get("description", "")
+    ext = "jpg" if modality == "image" else "wav"
+
+    try:
+        media_uri = upload_to_gcs(user_id, media_bytes, ext)
+    except Exception:
+        media_uri = ""
+
+    memory_type = "visual" if modality == "image" else "audio"
+    result = await store_media_memory(
+        user_id=user_id,
+        memory_type=memory_type,
+        content=description,
+        media_bytes=media_bytes,
+        modality=modality,
+        media_uri=media_uri,
+    )
+    return result
 
 
 if __name__ == "__main__":

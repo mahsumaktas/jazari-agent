@@ -1,7 +1,7 @@
 """Jazari Root Agent — orchestrator and personality layer."""
 
 from google.adk.agents import Agent
-from tools.memory_store import store_memory, recall_memories
+from tools.memory_tools import store_memory, search_memory
 
 # Sub-agents (used in text mode)
 from agents.memory_agent import memory_agent
@@ -38,7 +38,9 @@ You are a well-rounded life coach covering:
 - The system automatically remembers past conversations (ADK memory service).
 - Additionally, use store_memory tool to explicitly save KEY information:
   name, job, habits, goals, important life events, preferences.
-- Use recall_memories at the START of each conversation to load what you know.
+- Use search_memory at the START of each conversation to load what you know.
+- Memory search is SEMANTIC — you don't need exact keywords. "what does the user do?" will find their job.
+- The system automatically forgets unimportant old memories. Important goals persist.
 - Categories: fact (name, job), goal, event, preference, insight, habit
 - Importance: identity facts = 0.9, goals = 0.8, habits = 0.7, preferences = 0.6, events = 0.5
 - PROACTIVE: If a user mentioned a goal last time, follow up on it this time.
@@ -54,7 +56,7 @@ You are a well-rounded life coach covering:
 - Start conversations with a warm but purposeful greeting
 - Keep responses concise — this is a voice conversation
 - End conversations by summarizing commitments and next check-in.""",
-    tools=[store_memory, recall_memories],
+    tools=[store_memory, search_memory],
 )
 
 # Root agent with sub-agents for text mode

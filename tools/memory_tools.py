@@ -1,69 +1,98 @@
-"""Memory tools for Memory Agent — persistent cross-session knowledge."""
+"""Memory tools for Jazari agents — semantic search via MemoryStore."""
 
-from datetime import datetime, timezone
-from google.cloud import firestore
-from tools.firestore_client import get_user_ref
+from memory.store import MemoryStore
+
+_store: MemoryStore | None = None
 
 
-def store_memory(user_id: str, memory_type: str, content: str, importance: float = 0.5) -> dict:
-    """Store a new memory about the user.
+def _get_store() -> MemoryStore:
+    global _store
+    if _store is None:
+        _store = MemoryStore()
+    return _store
+
+
+async def store_memory(user_id: str, memory_type: str, content: str) -> dict:
+    """Store a new memory about the user with automatic importance scoring.
 
     Args:
         user_id: The user's unique identifier.
         memory_type: One of: fact, goal, event, preference, insight.
         content: The memory content (e.g., "User's name is Mehmet").
-        importance: How important this memory is (0.0 to 1.0).
 
     Returns:
         dict with memory_id and confirmation message.
     """
-    ref = get_user_ref(user_id).collection("memories").document()
-    memory = {
-        "type": memory_type,
-        "content": content,
-        "importance": importance,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "last_accessed": datetime.now(timezone.utc).isoformat(),
-        "access_count": 0,
-    }
-    ref.set(memory)
-    return {"memory_id": ref.id, "message": f"Remembered: {content[:50]}..."}
+    store = _get_store()
+    return await store.store(
+        user_id=user_id,
+        content=content,
+        memory_type=memory_type,
+    )
 
 
-def search_memory(user_id: str, query: str, limit: int = 5) -> dict:
-    """Search user's memories by keyword matching.
+async def search_memory(user_id: str, query: str, limit: int = 5) -> dict:
+    """Search user's memories using semantic similarity.
 
     Args:
         user_id: The user's unique identifier.
-        query: Search query — matches against memory content.
+        query: Natural language search query.
         limit: Maximum number of results.
 
     Returns:
-        dict with matching memories sorted by importance.
+        dict with matching memories ranked by relevance and importance.
     """
-    memories_ref = get_user_ref(user_id).collection("memories")
-    all_memories = memories_ref.order_by("importance", direction=firestore.Query.DESCENDING).stream()
-
-    query_lower = query.lower()
-    results = []
-    for m in all_memories:
-        data = m.to_dict()
-        if query_lower in data.get("content", "").lower():
-            results.append({
-                "memory_id": m.id,
-                "type": data["type"],
-                "content": data["content"],
-                "importance": data["importance"],
-                "created_at": data["created_at"],
-            })
-            m.reference.update({
-                "last_accessed": datetime.now(timezone.utc).isoformat(),
-                "access_count": firestore.Increment(1),
-            })
-            if len(results) >= limit:
-                break
-
+    store = _get_store()
+    results = await store.search(user_id=user_id, query=query, limit=limit)
     return {"memories": results, "count": len(results)}
+
+
+async def store_media_memory(
+    user_id: str,
+    memory_type: str,
+    content: str,
+    media_bytes: bytes,
+    modality: str,
+    media_uri: str = "",
+) -> dict:
+    """Store a photo or voice note memory with multimodal embedding.
+
+    Args:
+        user_id: The user's unique identifier.
+        memory_type: visual or audio.
+        content: Optional text description.
+        media_bytes: Raw image (JPEG) or audio (WAV) bytes.
+        modality: image or audio.
+        media_uri: GCS URI if media was uploaded.
+
+    Returns:
+        dict with memory_id and generated description.
+    """
+    store = _get_store()
+    return await store.store(
+        user_id=user_id,
+        content=content,
+        memory_type=memory_type,
+        modality=modality,
+        media_bytes=media_bytes,
+        media_uri=media_uri,
+    )
+
+
+async def get_decaying_goals(user_id: str) -> dict:
+    """Find goals and habits the user hasn't mentioned recently.
+
+    Used for proactive coaching: follow up on forgotten goals.
+
+    Args:
+        user_id: The user's unique identifier.
+
+    Returns:
+        dict with decaying goals/habits and days since last mention.
+    """
+    store = _get_store()
+    decaying = await store.get_decaying_goals(user_id=user_id)
+    return {"decaying_goals": decaying, "count": len(decaying)}
 
 
 def get_user_profile(user_id: str) -> dict:
@@ -73,20 +102,14 @@ def get_user_profile(user_id: str) -> dict:
         user_id: The user's unique identifier.
 
     Returns:
-        dict with user profile, active goals, habit streaks, and key memories.
+        dict with user profile from Firestore.
     """
-    user_ref = get_user_ref(user_id)
+    from tools.firestore_client import get_user_ref
+    from google.cloud import firestore
 
+    user_ref = get_user_ref(user_id)
     profile_doc = user_ref.get()
     profile = profile_doc.to_dict() if profile_doc.exists else {}
-
-    memories = (
-        user_ref.collection("memories")
-        .order_by("importance", direction=firestore.Query.DESCENDING)
-        .limit(5)
-        .stream()
-    )
-    key_memories = [{"type": m.to_dict()["type"], "content": m.to_dict()["content"]} for m in memories]
 
     goals = user_ref.collection("goals").where("status", "==", "active").stream()
     goal_count = sum(1 for _ in goals)
@@ -96,35 +119,6 @@ def get_user_profile(user_id: str) -> dict:
 
     return {
         "profile": profile,
-        "key_memories": key_memories,
         "active_goals": goal_count,
         "habits": habit_list,
     }
-
-
-def get_recent_context(user_id: str, limit: int = 3) -> dict:
-    """Get recent conversation summaries for context.
-
-    Args:
-        user_id: The user's unique identifier.
-        limit: Number of recent conversations to retrieve.
-
-    Returns:
-        dict with recent conversation summaries.
-    """
-    convos = (
-        get_user_ref(user_id)
-        .collection("conversations")
-        .order_by("date", direction=firestore.Query.DESCENDING)
-        .limit(limit)
-        .stream()
-    )
-    result = []
-    for c in convos:
-        data = c.to_dict()
-        result.append({
-            "date": data.get("date"),
-            "summary": data.get("summary"),
-            "key_points": data.get("key_points", []),
-        })
-    return {"recent_conversations": result}

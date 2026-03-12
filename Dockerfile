@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY agents/ agents/
 COPY tools/ tools/
+COPY memory/ memory/
 COPY server/ server/
 
 # Copy frontend build

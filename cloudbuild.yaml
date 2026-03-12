@@ -17,6 +17,7 @@ steps:
       - '--allow-unauthenticated'
       - '--set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
       - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest'
+      - '--set-env-vars=GCS_BUCKET=jazari-media'
       - '--session-affinity'
       - '--min-instances=0'
       - '--max-instances=3'
