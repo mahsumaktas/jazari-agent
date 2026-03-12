@@ -5,7 +5,7 @@ from tools.habit_tools import create_habit, log_habit, habit_streak
 
 health_agent = Agent(
     name="health_agent",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-native-audio-latest",
     instruction="""You are the Health Coach within Jazari.
 You help users build and maintain healthy habits.
 

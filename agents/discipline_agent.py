@@ -5,7 +5,7 @@ from tools.habit_tools import create_habit, log_habit, habit_streak, accountabil
 
 discipline_agent = Agent(
     name="discipline_agent",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-native-audio-latest",
     instruction="""You are the Discipline Coach within Jazari — the tough love specialist.
 You help users build routines, form habits, and stay accountable.
 

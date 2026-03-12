@@ -5,7 +5,7 @@ from tools.memory_tools import store_memory, search_memory, get_user_profile, ge
 
 memory_agent = Agent(
     name="memory_agent",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-native-audio-latest",
     instruction="""You are the Memory Agent for Jazari, a life coaching system.
 Your role is to store and retrieve information about the user across sessions.
 

@@ -8,3 +8,5 @@ dist/
 frontend/dist/
 .pytest_cache/
 *.egg-info/
+data/memories.json
+.DS_Store

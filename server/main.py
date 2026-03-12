@@ -1,9 +1,14 @@
 """FastAPI server — WebSocket endpoint for Jazari agent."""
 
+import sys
+from pathlib import Path
+
+# Ensure project root is in Python path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import os
 import json
 import asyncio
-from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -16,23 +21,40 @@ from google import genai
 from google.genai import types
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.adk.memory import InMemoryMemoryService
 
-from agents.root_agent import root_agent
+from agents.root_agent import root_agent, root_agent_with_subs
 
 app = FastAPI(title="Jazari Agent")
 
-# ADK Runner
+# Shared services — memory service enables cross-session recall
 session_service = InMemorySessionService()
+memory_service = InMemoryMemoryService()
+
+# ADK Runners — separate for text (with sub-agents) and audio (simple)
 runner = Runner(
     agent=root_agent,
     app_name="jazari",
     session_service=session_service,
+    memory_service=memory_service,
+)
+text_runner = Runner(
+    agent=root_agent_with_subs,
+    app_name="jazari",
+    session_service=session_service,
+    memory_service=memory_service,
 )
 
 # Serve frontend static files if built
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 if FRONTEND_DIR.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
+
+
+@app.get("/audio-processor.js")
+async def audio_processor():
+    """Serve AudioWorklet processor script."""
+    return FileResponse(FRONTEND_DIR / "audio-processor.js", media_type="application/javascript")
 
 
 @app.get("/")
@@ -71,7 +93,7 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
                 )
 
                 response_text = ""
-                async for event in runner.run_async(
+                async for event in text_runner.run_async(
                     user_id=userId,
                     session_id=session.id,
                     new_message=content,
@@ -91,40 +113,56 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
 
 @app.websocket("/ws/audio")
 async def websocket_audio(websocket: WebSocket, userId: str = "anonymous"):
-    """Voice WebSocket — bidirectional audio via ADK run_live().
-
-    Full agent pipeline works in voice mode: sub-agent routing,
-    tool calling (Firestore ops), and memory — all through voice.
-    """
+    """Voice WebSocket — bidirectional audio via ADK run_live()."""
     await websocket.accept()
+    print(f"[audio] WebSocket connected: userId={userId}")
 
     from server.audio_bridge import AudioBridge
 
-    bridge = AudioBridge(runner=runner, user_id=userId)
+    session = await session_service.create_session(app_name="jazari", user_id=userId)
+    bridge = AudioBridge(runner=runner, user_id=userId, session_id=session.id)
+    event_task = None
 
     try:
         async def on_audio(data: bytes):
-            await websocket.send_bytes(data)
+            try:
+                await websocket.send_bytes(data)
+            except Exception:
+                pass  # WebSocket may have closed
 
         async def on_transcript(text: str):
-            await websocket.send_json({"type": "transcript", "content": text})
+            try:
+                await websocket.send_json({"type": "transcript", "content": text})
+            except Exception:
+                pass
 
-        # Start ADK live session (full agent pipeline)
+        # Start ADK live session
+        print(f"[audio] Starting ADK live session...")
         event_task = await bridge.start(on_audio=on_audio, on_transcript=on_transcript)
+        print(f"[audio] ADK live session started")
 
         # Forward browser audio to ADK
-        try:
-            while True:
+        while True:
+            try:
                 data = await websocket.receive()
-                if "bytes" in data:
-                    await bridge.send_audio(data["bytes"])
-        except WebSocketDisconnect:
+            except (WebSocketDisconnect, RuntimeError):
+                print(f"[audio] WebSocket disconnected")
+                break
+            if "bytes" in data:
+                await bridge.send_audio(data["bytes"])
+
+    except Exception as e:
+        print(f"[audio] Error: {type(e).__name__}: {e}")
+        try:
+            await websocket.send_json({"type": "error", "content": str(e)})
+        except Exception:
             pass
-        finally:
-            event_task.cancel()
 
     finally:
+        if event_task:
+            event_task.cancel()
         await bridge.close()
+        print(f"[audio] Session cleaned up")
 
 
 if __name__ == "__main__":

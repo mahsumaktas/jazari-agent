@@ -7,8 +7,23 @@ export function useWebSocket(userId: string) {
   const [transcripts, setTranscripts] = useState<Message[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null)
   const reconnectAttempts = useRef(0)
   const MAX_RECONNECT = 3
+
+  async function initAudioPlayback() {
+    if (audioCtxRef.current) return
+
+    // Match Gemini's output sample rate exactly
+    const ctx = new AudioContext({ sampleRate: 24000 })
+    await ctx.audioWorklet.addModule('/audio-processor.js')
+
+    const workletNode = new AudioWorkletNode(ctx, 'stream-processor')
+    workletNode.connect(ctx.destination)
+
+    audioCtxRef.current = ctx
+    workletNodeRef.current = workletNode
+  }
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -16,14 +31,22 @@ export function useWebSocket(userId: string) {
     ws.binaryType = 'arraybuffer'
     wsRef.current = ws
 
-    ws.onopen = () => {
+    ws.onopen = async () => {
       setIsConnected(true)
       reconnectAttempts.current = 0
+      await initAudioPlayback()
     }
 
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
-        playAudio(event.data)
+        // Send Int16 PCM directly to AudioWorklet
+        const int16 = new Int16Array(event.data)
+        if (int16.length > 0 && workletNodeRef.current) {
+          workletNodeRef.current.port.postMessage(
+            { event: 'write', buffer: int16 },
+            [int16.buffer]  // Transfer ownership for performance
+          )
+        }
       } else {
         try {
           const msg = JSON.parse(event.data)
@@ -55,27 +78,23 @@ export function useWebSocket(userId: string) {
   const disconnect = useCallback(() => {
     reconnectAttempts.current = MAX_RECONNECT
     wsRef.current?.close()
+
+    // Clean up audio worklet
+    if (workletNodeRef.current) {
+      workletNodeRef.current.port.postMessage({ event: 'clear' })
+      workletNodeRef.current.disconnect()
+      workletNodeRef.current = null
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close()
+      audioCtxRef.current = null
+    }
   }, [])
 
-  async function playAudio(pcmData: ArrayBuffer) {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new AudioContext({ sampleRate: 24000 })
-    }
-    const ctx = audioCtxRef.current
-    const int16 = new Int16Array(pcmData)
-    const float32 = new Float32Array(int16.length)
-    for (let i = 0; i < int16.length; i++) {
-      float32[i] = int16[i] / 32768
-    }
-    const buffer = ctx.createBuffer(1, float32.length, 24000)
-    buffer.copyToChannel(float32, 0)
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-    source.connect(ctx.destination)
-    source.start()
-  }
-
-  useEffect(() => () => { wsRef.current?.close() }, [])
+  useEffect(() => () => {
+    wsRef.current?.close()
+    audioCtxRef.current?.close()
+  }, [])
 
   return { isConnected, transcripts, connect, disconnect, sendAudio, setTranscripts }
 }
