@@ -50,11 +50,19 @@ User → Frontend (React) → WebSocket/REST → Cloud Run (FastAPI)
                     Forgetting Curve + Importance Scoring
 ```
 
+## Safety & Guardrails
+
+- **Crisis detection**: `before_model_callback` safety guardrail detects crisis topics and redirects to professional resources
+- **Anti-hallucination**: Dedicated search_agent with Google Search grounding for factual claims (nutrition, exercise)
+- **Input validation**: Server-side validation on all REST endpoints
+- **User isolation**: Memory system enforces strict per-user data boundaries
+
 ## Challenges we ran into
 
 - **LanceDB on Cloud Run**: LanceDB uses local disk, but Cloud Run containers are ephemeral. Solved with Firestore backup/restore on startup.
 - **google_search tool limitation**: Can't mix with FunctionTools in same agent. Solved by creating a dedicated search_agent sub-agent.
 - **Multimodal embedding model**: Gemini Embedding 2 is experimental — API surface changed during development.
+- **Audio transcription pipeline**: Enabling both input and output transcription in ADK run_live required careful RunConfig setup.
 
 ## What we learned
 
@@ -68,6 +76,7 @@ User → Frontend (React) → WebSocket/REST → Cloud Run (FastAPI)
 - Push notifications for decaying goals
 - Habit streak visualization dashboard
 - Multi-user family coaching mode
+- Dream replay: periodic memory consolidation inspired by sleep-dependent learning
 
 ## Built with
 
