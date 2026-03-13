@@ -81,6 +81,25 @@ function App() {
     }
   }, [userId])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Space to toggle mic in voice mode (only when not typing in an input)
+      if (e.code === 'Space' && mode === 'voice' &&
+          !(e.target instanceof HTMLInputElement) &&
+          !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault()
+        handleToggle()
+      }
+      // Escape to stop recording
+      if (e.code === 'Escape' && isRecording) {
+        stopAudio()
+        disconnect()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [mode, isRecording, handleToggle, stopAudio, disconnect])
+
   const handleVoiceNote = useCallback(async (base64: string) => {
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
     await fetch(`${protocol}//${window.location.host}/api/media-memory`, {
@@ -97,13 +116,20 @@ function App() {
 
   return (
     <div className="min-h-screen bg-jazari-dark flex">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-jazari-gold focus:text-jazari-dark focus:rounded-lg"
+      >
+        Skip to content
+      </a>
+
       {/* Left panel */}
       <aside className="w-64 p-4 hidden md:block">
         <ProfilePanel profile={profile} />
       </aside>
 
       {/* Center */}
-      <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+      <main id="main-content" className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
         {/* Connection status indicator */}
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-jazari-surface text-xs">
           <span className={`w-2 h-2 rounded-full ${
@@ -171,7 +197,7 @@ function App() {
             </div>
 
             <p className="text-jazari-text-dim text-xs mt-2">
-              {isRecording ? 'Listening... click to stop' : 'Click to talk | Long-press for voice note'}
+              {isRecording ? 'Listening... click to stop' : 'Click or press Space to talk | Long-press for voice note'}
             </p>
 
             {mediaPreview && (
@@ -199,9 +225,16 @@ function App() {
               messages={textChat.messages}
               isLoading={textChat.isLoading}
               onSend={textChat.sendMessage}
+              onPhotoCapture={handlePhotoCapture}
             />
           </div>
         )}
+
+        <div className="mt-auto pt-4">
+          <p className="text-jazari-text-dim/30 text-[10px] text-center">
+            {mode === 'voice' ? 'Space: Talk | Esc: Stop' : 'Enter: Send'}
+          </p>
+        </div>
       </main>
 
       {/* Right panel */}
