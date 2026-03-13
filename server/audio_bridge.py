@@ -33,6 +33,8 @@ class AudioBridge:
                     )
                 )
             ),
+            output_audio_transcription=True,
+            input_audio_transcription=True,
         )
 
         async def consume_events():

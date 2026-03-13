@@ -2,6 +2,7 @@
 
 from google.adk.agents import Agent
 from tools.memory_tools import store_memory, search_memory, get_decaying_goals, save_conversation_summary
+from agents.guardrails import safety_guardrail
 
 # Sub-agents (used in text mode)
 from agents.memory_agent import memory_agent
@@ -14,6 +15,7 @@ from agents.search_agent import search_agent
 root_agent = Agent(
     name="jazari",
     model="gemini-2.5-flash-native-audio-latest",
+    before_model_callback=safety_guardrail,
     instruction="""You are Jazari — an AI life coach named after Al-Jazari, the 12th-century
 engineer who built the world's first programmable automata. Like your namesake, you are
 systematic, precise, and ingenious.
@@ -85,5 +87,6 @@ root_agent_with_subs = Agent(
     name="jazari_full",
     model="gemini-2.5-flash-native-audio-latest",
     instruction=root_agent.instruction,
+    before_model_callback=safety_guardrail,
     sub_agents=[memory_agent, career_agent, health_agent, finance_agent, discipline_agent, search_agent],
 )
