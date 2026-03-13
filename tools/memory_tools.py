@@ -23,12 +23,15 @@ async def store_memory(user_id: str, memory_type: str, content: str) -> dict:
     Returns:
         dict with memory_id and confirmation message.
     """
-    store = _get_store()
-    return await store.store(
-        user_id=user_id,
-        content=content,
-        memory_type=memory_type,
-    )
+    try:
+        store = _get_store()
+        return await store.store(
+            user_id=user_id,
+            content=content,
+            memory_type=memory_type,
+        )
+    except Exception as e:
+        return {"error": f"Failed to store memory: {type(e).__name__}", "message": "I'll remember this for now but couldn't persist it."}
 
 
 async def search_memory(user_id: str, query: str, limit: int = 5) -> dict:
@@ -42,9 +45,12 @@ async def search_memory(user_id: str, query: str, limit: int = 5) -> dict:
     Returns:
         dict with matching memories ranked by relevance and importance.
     """
-    store = _get_store()
-    results = await store.search(user_id=user_id, query=query, limit=limit)
-    return {"memories": results, "count": len(results)}
+    try:
+        store = _get_store()
+        results = await store.search(user_id=user_id, query=query, limit=limit)
+        return {"memories": results, "count": len(results)}
+    except Exception:
+        return {"memories": [], "count": 0, "note": "Memory search unavailable, starting fresh."}
 
 
 async def store_media_memory(
@@ -90,9 +96,12 @@ async def get_decaying_goals(user_id: str) -> dict:
     Returns:
         dict with decaying goals/habits and days since last mention.
     """
-    store = _get_store()
-    decaying = await store.get_decaying_goals(user_id=user_id)
-    return {"decaying_goals": decaying, "count": len(decaying)}
+    try:
+        store = _get_store()
+        decaying = await store.get_decaying_goals(user_id=user_id)
+        return {"decaying_goals": decaying, "count": len(decaying)}
+    except Exception:
+        return {"decaying_goals": [], "count": 0}
 
 
 def get_user_profile(user_id: str) -> dict:
