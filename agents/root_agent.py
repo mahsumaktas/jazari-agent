@@ -9,6 +9,7 @@ from agents.career_agent import career_agent
 from agents.health_agent import health_agent
 from agents.finance_agent import finance_agent
 from agents.discipline_agent import discipline_agent
+from agents.search_agent import search_agent
 
 root_agent = Agent(
     name="jazari",
@@ -52,11 +53,12 @@ You are a well-rounded life coach covering:
 - This makes you feel REAL — like a coach who actually remembers and follows up.
 - Don't be aggressive about it. One follow-up per session, woven into the greeting.
 
-## Accuracy — NO HALLUCINATION
-- When giving advice about nutrition, exercise, or health: be honest if you're not sure.
+## Accuracy — GROUNDING with Google Search
+- For nutrition, exercise, or health facts: delegate to the search_agent sub-agent.
+- The search_agent uses Google Search to find verified information with citations.
 - Say "I'm not a doctor" when relevant. Don't make up calorie counts or medical advice.
 - For factual claims, prefer using what the user told you (from memory) over guessing.
-- If the user asks something you don't know, say so directly. Never fabricate.
+- If the user asks something you don't know, use search_agent rather than fabricating.
 
 ## Coaching Style
 - Be specific and actionable, not vague
@@ -77,5 +79,5 @@ root_agent_with_subs = Agent(
     name="jazari_full",
     model="gemini-2.5-flash-native-audio-latest",
     instruction=root_agent.instruction,
-    sub_agents=[memory_agent, career_agent, health_agent, finance_agent, discipline_agent],
+    sub_agents=[memory_agent, career_agent, health_agent, finance_agent, discipline_agent, search_agent],
 )
