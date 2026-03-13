@@ -1,12 +1,14 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { MicButton } from './components/MicButton'
 import { CameraButton } from './components/CameraButton'
 import { Waveform } from './components/Waveform'
 import { Transcript } from './components/Transcript'
+import { TextChat } from './components/TextChat'
 import { ProfilePanel } from './components/ProfilePanel'
 import { Dashboard } from './components/Dashboard'
 import { useAudio } from './hooks/useAudio'
 import { useWebSocket } from './hooks/useWebSocket'
+import { useTextChat } from './hooks/useTextChat'
 
 function App() {
   const [userId] = useState(() => {
@@ -20,10 +22,18 @@ function App() {
 
   const { isRecording, start: startAudio, stop: stopAudio } = useAudio()
   const { isConnected, transcripts, connect, disconnect, sendAudio } = useWebSocket(userId)
+  const textChat = useTextChat(userId)
+  const [mode, setMode] = useState<'voice' | 'text'>('voice')
   const [profile] = useState(null)
   const [todayDone] = useState<string[]>([])
   const [todayMissed] = useState<string[]>([])
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (mode === 'text' && !textChat.isConnected) {
+      textChat.connect()
+    }
+  }, [mode, textChat])
 
   const handleToggle = useCallback(async () => {
     if (isRecording) {
@@ -80,36 +90,68 @@ function App() {
         <h1 className="text-3xl font-bold text-jazari-gold tracking-widest">JAZARI</h1>
         <p className="text-jazari-text-dim text-sm tracking-wide">Your AI Life Coach</p>
 
-        <Waveform isActive={isRecording} />
-
-        <div className="flex items-center gap-4">
-          <CameraButton onCapture={handlePhotoCapture} />
-          <MicButton
-            isConnected={isConnected}
-            isRecording={isRecording}
-            onToggle={handleToggle}
-            onVoiceNote={handleVoiceNote}
-          />
+        {/* Mode toggle */}
+        <div className="flex items-center gap-1 bg-jazari-surface rounded-full p-1">
+          <button
+            onClick={() => setMode('voice')}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              mode === 'voice' ? 'bg-jazari-gold text-jazari-dark' : 'text-jazari-text-dim hover:text-jazari-text'
+            }`}
+          >
+            Voice
+          </button>
+          <button
+            onClick={() => setMode('text')}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              mode === 'text' ? 'bg-jazari-gold text-jazari-dark' : 'text-jazari-text-dim hover:text-jazari-text'
+            }`}
+          >
+            Text
+          </button>
         </div>
 
-        <p className="text-jazari-text-dim text-xs mt-2">
-          {isRecording ? 'Listening... click to stop' : 'Click to talk | Long-press for voice note'}
-        </p>
+        {mode === 'voice' ? (
+          <>
+            <Waveform isActive={isRecording} />
 
-        {mediaPreview && (
-          <div className="w-full max-w-lg mt-4 flex justify-center">
-            <div className="relative">
-              <img src={mediaPreview} alt="Preview" className="w-48 h-48 object-cover rounded-lg border border-jazari-gold/30" />
-              <div className="absolute bottom-2 left-2 right-2 bg-black/60 text-jazari-gold text-xs px-2 py-1 rounded">
-                Storing memory...
-              </div>
+            <div className="flex items-center gap-4">
+              <CameraButton onCapture={handlePhotoCapture} />
+              <MicButton
+                isConnected={isConnected}
+                isRecording={isRecording}
+                onToggle={handleToggle}
+                onVoiceNote={handleVoiceNote}
+              />
             </div>
+
+            <p className="text-jazari-text-dim text-xs mt-2">
+              {isRecording ? 'Listening... click to stop' : 'Click to talk | Long-press for voice note'}
+            </p>
+
+            {mediaPreview && (
+              <div className="w-full max-w-lg mt-4 flex justify-center">
+                <div className="relative">
+                  <img src={mediaPreview} alt="Preview" className="w-48 h-48 object-cover rounded-lg border border-jazari-gold/30" />
+                  <div className="absolute bottom-2 left-2 right-2 bg-black/60 text-jazari-gold text-xs px-2 py-1 rounded">
+                    Storing memory...
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="w-full max-w-lg mt-8">
+              <Transcript messages={transcripts} />
+            </div>
+          </>
+        ) : (
+          <div className="w-full max-w-lg mt-4">
+            <TextChat
+              messages={textChat.messages}
+              isLoading={textChat.isLoading}
+              onSend={textChat.sendMessage}
+            />
           </div>
         )}
-
-        <div className="w-full max-w-lg mt-8">
-          <Transcript messages={transcripts} />
-        </div>
       </main>
 
       {/* Right panel */}
