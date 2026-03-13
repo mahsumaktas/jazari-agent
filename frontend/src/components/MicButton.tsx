@@ -61,6 +61,8 @@ export function MicButton({ isConnected, isRecording, onToggle, onVoiceNote }: P
         if (pressTimer.current) clearTimeout(pressTimer.current)
         if (mediaRecorder.current) { mediaRecorder.current.stop(); mediaRecorder.current = null }
       }}
+      role="button"
+      aria-label={isRecording ? 'Stop recording' : 'Start recording'}
       className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer select-none ${
         isRecording
           ? 'bg-red-600 shadow-[0_0_40px_rgba(220,38,38,0.5)] scale-110'
@@ -68,6 +70,7 @@ export function MicButton({ isConnected, isRecording, onToggle, onVoiceNote }: P
           ? 'bg-jazari-gold hover:bg-jazari-gold-light shadow-[0_0_20px_rgba(197,165,90,0.3)]'
           : 'bg-jazari-surface-light hover:bg-jazari-gold/20'
       }`}
+      style={isRecording ? { animation: 'recordingPulse 1.5s ease-in-out infinite' } : undefined}
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-jazari-dark">
         {isRecording ? (

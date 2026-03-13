@@ -36,6 +36,7 @@ class MemoryStore:
         self.db_path = db_path
         self.db = lancedb.connect(db_path)
         self._client = None
+        self._lock = asyncio.Lock()
         self._ensure_table()
 
     def _ensure_table(self):
@@ -52,55 +53,85 @@ class MemoryStore:
 
     async def _embed_text(self, text: str) -> list[float]:
         from google.genai import types
-        response = await self.client.aio.models.embed_content(
-            model=EMBEDDING_MODEL,
-            contents=text,
-            config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
-        )
+        try:
+            response = await asyncio.wait_for(
+                self.client.aio.models.embed_content(
+                    model=EMBEDDING_MODEL,
+                    contents=text,
+                    config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
+                ),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            raise TimeoutError("Gemini embed_content (text) timed out after 15s")
         return response.embeddings[0].values
 
     async def _embed_image(self, image_bytes: bytes) -> list[float]:
         from google.genai import types
         image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-        response = await self.client.aio.models.embed_content(
-            model=EMBEDDING_MODEL,
-            contents=image_part,
-            config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
-        )
+        try:
+            response = await asyncio.wait_for(
+                self.client.aio.models.embed_content(
+                    model=EMBEDDING_MODEL,
+                    contents=image_part,
+                    config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
+                ),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            raise TimeoutError("Gemini embed_content (image) timed out after 15s")
         return response.embeddings[0].values
 
     async def _embed_audio(self, audio_bytes: bytes) -> list[float]:
         from google.genai import types
         audio_part = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
-        response = await self.client.aio.models.embed_content(
-            model=EMBEDDING_MODEL,
-            contents=audio_part,
-            config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
-        )
+        try:
+            response = await asyncio.wait_for(
+                self.client.aio.models.embed_content(
+                    model=EMBEDDING_MODEL,
+                    contents=audio_part,
+                    config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
+                ),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            raise TimeoutError("Gemini embed_content (audio) timed out after 15s")
         return response.embeddings[0].values
 
     async def _describe_image(self, image_bytes: bytes) -> str:
         from google.genai import types
         image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-        response = await self.client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                "Describe this image in 1-2 sentences. Focus on what's visible: food, objects, people, activities.",
-                image_part,
-            ],
-        )
+        try:
+            response = await asyncio.wait_for(
+                self.client.aio.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=[
+                        "Describe this image in 1-2 sentences. Focus on what's visible: food, objects, people, activities.",
+                        image_part,
+                    ],
+                ),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            raise TimeoutError("Gemini generate_content (describe image) timed out after 15s")
         return response.text.strip()
 
     async def _transcribe_audio(self, audio_bytes: bytes) -> str:
         from google.genai import types
         audio_part = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
-        response = await self.client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                "Transcribe this audio exactly. Return only the transcript text.",
-                audio_part,
-            ],
-        )
+        try:
+            response = await asyncio.wait_for(
+                self.client.aio.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=[
+                        "Transcribe this audio exactly. Return only the transcript text.",
+                        audio_part,
+                    ],
+                ),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            raise TimeoutError("Gemini generate_content (transcribe audio) timed out after 15s")
         return response.text.strip()
 
     async def store(
@@ -128,20 +159,21 @@ class MemoryStore:
 
         importance = await score_importance(content, memory_type)
 
-        table = self.db.open_table(TABLE_NAME)
-        table.add([{
-            "id": memory_id,
-            "content": content,
-            "vector": vector,
-            "memory_type": memory_type,
-            "importance": float(importance),
-            "modality": modality,
-            "media_uri": media_uri,
-            "created_at": now,
-            "last_accessed": now,
-            "decay_factor": float(importance * 30),
-            "user_id": user_id,
-        }])
+        async with self._lock:
+            table = self.db.open_table(TABLE_NAME)
+            table.add([{
+                "id": memory_id,
+                "content": content,
+                "vector": vector,
+                "memory_type": memory_type,
+                "importance": float(importance),
+                "modality": modality,
+                "media_uri": media_uri,
+                "created_at": now,
+                "last_accessed": now,
+                "decay_factor": float(importance * 30),
+                "user_id": user_id,
+            }])
 
         # Backup single record to Firestore (fire-and-forget)
         try:
@@ -223,14 +255,15 @@ class MemoryStore:
 
         # Update last_accessed
         now_iso = now.isoformat()
-        for mem in filtered[:limit]:
-            try:
-                table.update(
-                    where=f"id = '{mem['memory_id']}'",
-                    values={"last_accessed": now_iso},
-                )
-            except Exception:
-                pass
+        async with self._lock:
+            for mem in filtered[:limit]:
+                try:
+                    table.update(
+                        where=f"id = '{mem['memory_id']}'",
+                        values={"last_accessed": now_iso},
+                    )
+                except Exception:
+                    pass
 
         filtered.sort(key=lambda m: m["effective_importance"], reverse=True)
         return filtered[:limit]

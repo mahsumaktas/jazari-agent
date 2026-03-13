@@ -30,6 +30,8 @@ import base64
 from contextlib import asynccontextmanager
 from google.cloud import storage as gcs
 
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50MB
+
 GCS_BUCKET = "jazari-media"
 _gcs_client = None
 
@@ -152,7 +154,18 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
                 from tools.memory_tools import store_media_memory
 
                 modality = msg.get("modality", "image")
-                media_bytes = base64.b64decode(msg.get("data", ""))
+                data_b64_ws = msg.get("data", "")
+
+                # Size check before decoding
+                estimated_bytes = len(data_b64_ws) * 3 // 4
+                if estimated_bytes > MAX_UPLOAD_BYTES:
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": f"Upload too large ({estimated_bytes // (1024*1024)}MB). Max is {MAX_UPLOAD_BYTES // (1024*1024)}MB.",
+                    })
+                    continue
+
+                media_bytes = base64.b64decode(data_b64_ws)
                 description = msg.get("description", "")
                 ext = "jpg" if modality == "image" else "wav"
 
@@ -248,6 +261,11 @@ async def upload_media_memory(request: Request):
 
     if not user_id or not modality or not data_b64:
         return {"error": "Missing required fields: user_id, modality, data"}
+
+    # base64 is ~1.33x original size; check before decoding
+    estimated_bytes = len(data_b64) * 3 // 4
+    if estimated_bytes > MAX_UPLOAD_BYTES:
+        return {"error": f"Upload too large ({estimated_bytes // (1024*1024)}MB). Max is {MAX_UPLOAD_BYTES // (1024*1024)}MB."}
 
     if modality not in ("image", "audio"):
         return {"error": f"Invalid modality: {modality}. Must be 'image' or 'audio'."}

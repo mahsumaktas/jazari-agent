@@ -87,11 +87,32 @@ function App() {
 
       {/* Center */}
       <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
-        <h1 className="text-3xl font-bold text-jazari-gold tracking-widest">JAZARI</h1>
-        <p className="text-jazari-text-dim text-sm tracking-wide">Your AI Life Coach</p>
+        {/* Connection status indicator */}
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-jazari-surface text-xs">
+          <span className={`w-2 h-2 rounded-full ${
+            (mode === 'voice' ? isConnected : textChat.isConnected)
+              ? 'bg-green-500'
+              : 'bg-red-500'
+          }`} />
+          <span className="text-jazari-text-dim">
+            {(mode === 'voice' ? isConnected : textChat.isConnected) ? 'Connected' : 'Disconnected'}
+          </span>
+        </div>
+
+        <h1
+          className="text-3xl font-bold text-jazari-gold tracking-widest"
+          style={{ animation: 'fadeInUp 0.6s ease forwards', opacity: 0 }}
+        >JAZARI</h1>
+        <p
+          className="text-jazari-text-dim text-sm tracking-wide"
+          style={{ animation: 'fadeInUp 0.6s ease forwards', animationDelay: '0.2s', opacity: 0 }}
+        >Your AI Life Coach</p>
 
         {/* Mode toggle */}
-        <div className="flex items-center gap-1 bg-jazari-surface rounded-full p-1">
+        <div
+          className="flex items-center gap-1 bg-jazari-surface rounded-full p-1"
+          style={{ animation: 'fadeInUp 0.6s ease forwards', animationDelay: '0.4s', opacity: 0 }}
+        >
           <button
             onClick={() => setMode('voice')}
             className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${

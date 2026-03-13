@@ -25,14 +25,14 @@ export function TextChat({ messages, isLoading, onSend }: Props) {
 
   return (
     <div className="w-full max-w-lg flex flex-col">
-      <div className="max-h-64 overflow-y-auto space-y-3 p-4 bg-jazari-surface rounded-t-lg">
+      <div role="log" aria-label="Chat messages" className="max-h-64 overflow-y-auto space-y-3 p-4 bg-jazari-surface rounded-t-lg">
         {messages.length === 0 ? (
           <p className="text-jazari-text-dim text-sm text-center">
             Type a message to start chatting with Jazari
           </p>
         ) : (
           messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`} style={{ animation: 'fadeInUp 0.3s ease' }}>
               <div className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
                 msg.role === 'user'
                   ? 'bg-jazari-gold/20 text-jazari-text'
@@ -60,6 +60,7 @@ export function TextChat({ messages, isLoading, onSend }: Props) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
+          aria-label="Type a message"
           className="flex-1 bg-jazari-dark text-jazari-text text-sm px-3 py-2 rounded-lg border border-jazari-gold/20 focus:border-jazari-gold focus:outline-none placeholder:text-jazari-text-dim"
           disabled={isLoading}
         />

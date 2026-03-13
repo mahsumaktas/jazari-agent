@@ -39,6 +39,7 @@ export function CameraButton({ onCapture }: Props) {
         onClick={handleClick}
         className="w-12 h-12 rounded-full flex items-center justify-center bg-jazari-surface-light hover:bg-jazari-gold/20 transition-colors cursor-pointer"
         title="Take photo or select from gallery"
+        aria-label="Take photo or select from gallery"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-jazari-gold">
           <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />

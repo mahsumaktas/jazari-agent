@@ -1,5 +1,6 @@
 """Importance scoring via Gemini Flash — rates memories 0.0-1.0."""
 
+import asyncio
 from google import genai
 
 SCORING_PROMPT_TEMPLATE = """Rate memory importance 0.0-1.0:
@@ -26,10 +27,16 @@ def _get_client():
 
 async def _generate_async(prompt: str):
     client = _get_client()
-    response = await client.aio.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-    )
+    try:
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+            ),
+            timeout=10.0,
+        )
+    except asyncio.TimeoutError:
+        raise TimeoutError("Gemini scoring timed out after 10s")
     return response
 
 
@@ -42,6 +49,8 @@ async def score_importance(content: str, memory_type: str) -> float:
         score = float(text)
         return max(0.0, min(1.0, score))
     except (ValueError, TypeError, AttributeError):
+        return DEFAULT_SCORE
+    except (TimeoutError, asyncio.TimeoutError):
         return DEFAULT_SCORE
     except Exception:
         return DEFAULT_SCORE
