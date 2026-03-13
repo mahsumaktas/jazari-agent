@@ -70,11 +70,22 @@ User → Frontend (React) → WebSocket/REST → Cloud Run (FastAPI)
 - Proactive agent behavior (initiating topics) creates a dramatically more engaging experience than reactive-only agents
 - Cross-modal search (text query finding photo memories) is a powerful demo moment
 
+## Production Quality
+
+- **75 automated tests** covering agents, memory, tools, API endpoints, and edge cases
+- **Error boundary** catches frontend crashes with graceful recovery
+- **Real-time audio visualization** using Web Audio API's AnalyserNode
+- **Memory timeline** dashboard showing stored memories, habits, and goals
+- **Sub-agent delegation labels** showing which specialist handled each response
+- **Proactive welcome greeting** — agent searches memory and greets you by context on connect
+- **PWA manifest** for installable mobile experience
+- **Non-root Docker container** with health checks
+- **Thread-safe** concurrent memory writes via asyncio.Lock
+
 ## What's next
 
 - Real-time camera vision during conversation (Gemini Live API supports video)
 - Push notifications for decaying goals
-- Habit streak visualization dashboard
 - Multi-user family coaching mode
 - Dream replay: periodic memory consolidation inspired by sleep-dependent learning
 

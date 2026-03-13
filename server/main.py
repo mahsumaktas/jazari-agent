@@ -194,10 +194,32 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
     try:
         while True:
             data = await websocket.receive_text()
-            msg = json.loads(data)
+            try:
+                msg = json.loads(data)
+            except json.JSONDecodeError:
+                await websocket.send_json({
+                    "type": "error",
+                    "content": "Invalid message format.",
+                })
+                continue
 
             if msg.get("type") == "text":
                 user_text = msg.get("content", "")
+
+                if not user_text.strip():
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": "Empty message.",
+                    })
+                    continue
+
+                if len(user_text) > 10000:
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": "Message too long. Please keep it under 10,000 characters.",
+                    })
+                    continue
+
                 content = types.Content(
                     role="user",
                     parts=[types.Part.from_text(user_text)],
@@ -205,14 +227,18 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
 
                 response_text = ""
                 agent_name = "jazari"
-                async for event in text_runner.run_async(
-                    user_id=userId,
-                    session_id=session.id,
-                    new_message=content,
-                ):
-                    if event.is_final_response() and event.content and event.content.parts:
-                        response_text = event.content.parts[0].text or ""
-                        agent_name = event.author
+                try:
+                    async for event in text_runner.run_async(
+                        user_id=userId,
+                        session_id=session.id,
+                        new_message=content,
+                    ):
+                        if event.is_final_response() and event.content and event.content.parts:
+                            response_text = event.content.parts[0].text or ""
+                            agent_name = event.author
+                except Exception as e:
+                    response_text = "Sorry, I encountered an issue. Please try again."
+                    agent_name = "jazari"
 
                 await websocket.send_json({
                     "type": "text",

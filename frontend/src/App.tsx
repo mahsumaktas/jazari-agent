@@ -28,6 +28,7 @@ function App() {
   const [todayDone, setTodayDone] = useState<string[]>([])
   const [todayMissed, setTodayMissed] = useState<string[]>([])
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const [mediaStatus, setMediaStatus] = useState<'idle' | 'storing' | 'stored'>('idle')
 
   useEffect(() => {
     const base = `${window.location.protocol}//${window.location.host}`
@@ -56,6 +57,7 @@ function App() {
 
   const handlePhotoCapture = useCallback(async (base64: string) => {
     setMediaPreview(`data:image/jpeg;base64,${base64}`)
+    setMediaStatus('storing')
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
     try {
       await fetch(`${protocol}//${window.location.host}/api/media-memory`, {
@@ -68,8 +70,14 @@ function App() {
           description: '',
         }),
       })
-    } finally {
+      setMediaStatus('stored')
+      setTimeout(() => {
+        setMediaPreview(null)
+        setMediaStatus('idle')
+      }, 1500)
+    } catch {
       setMediaPreview(null)
+      setMediaStatus('idle')
     }
   }, [userId])
 
@@ -170,8 +178,12 @@ function App() {
               <div className="w-full max-w-lg mt-4 flex justify-center">
                 <div className="relative">
                   <img src={mediaPreview} alt="Preview" className="w-48 h-48 object-cover rounded-lg border border-jazari-gold/30" />
-                  <div className="absolute bottom-2 left-2 right-2 bg-black/60 text-jazari-gold text-xs px-2 py-1 rounded">
-                    Storing memory...
+                  <div className={`absolute bottom-2 left-2 right-2 text-xs px-2 py-1 rounded ${
+                    mediaStatus === 'stored'
+                      ? 'bg-green-900/70 text-green-300'
+                      : 'bg-black/60 text-jazari-gold'
+                  }`}>
+                    {mediaStatus === 'stored' ? 'Memory stored!' : 'Storing memory...'}
                   </div>
                 </div>
               </div>
