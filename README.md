@@ -18,6 +18,13 @@ Built for the [Gemini Live Agent Challenge](https://geminiliveagentchallenge.dev
 - **Honest coaching** — Not a yes-man. Celebrates real wins, calls out real failures
 - **Multilingual** — Speaks your language (Turkish, English, and 40+ languages via Gemini)
 - **Goal & habit tracking** — Career goals, health habits, spending, and discipline routines
+- **Semantic memory** — LanceDB vector search with Gemini Embedding 2 for cross-session recall
+- **Ebbinghaus forgetting curve** — Memories decay over time; important goals persist, small talk fades
+- **Photo memory** — Take a photo of your meal, Jazari remembers it with multimodal embedding
+- **Voice note memory** — Long-press mic to save voice notes as searchable memories
+- **Cross-modal search** — Ask "what did I eat?" and find photo memories via text query
+- **Proactive follow-up** — Jazari detects goals you haven't mentioned and brings them up
+- **Google Search grounding** — Verified nutrition/exercise facts, no hallucinated calorie counts
 
 ### Architecture
 
@@ -34,7 +41,7 @@ User (Voice) → WebSocket → Cloud Run (FastAPI)
                       Memory Agent → Firestore
 ```
 
-See [docs/architecture.md](docs/architecture.md) for the full diagram.
+See [docs/architecture.html](docs/architecture.html) for the full interactive architecture diagram.
 
 ## Tech Stack
 
@@ -45,8 +52,11 @@ See [docs/architecture.md](docs/architecture.md) for the full diagram.
 | Model | Gemini 2.5 Flash (native audio) |
 | Backend | Python 3.12 + FastAPI |
 | Frontend | React + Vite + Tailwind CSS |
+| Memory | LanceDB + Gemini Embedding 2 (768-dim vectors) |
 | Database | Google Cloud Firestore |
-| Deploy | Google Cloud Run |
+| Media Storage | Google Cloud Storage |
+| Search | Google Search (grounding via ADK) |
+| Deploy | Google Cloud Run + Cloud Build |
 
 ## Quick Start
 
@@ -116,6 +126,7 @@ gcloud builds submit --config cloudbuild.yaml
 | **Finance Coach** | Spending, budgets, savings | Pattern-focused, no judgment on purchases |
 | **Discipline Coach** | Habits, routines, accountability | The tough one — no excuses accepted |
 | **Memory Agent** | Cross-session knowledge | Never forgets, never fabricates |
+| **Search Agent** | Google Search grounding | Verified facts, no hallucination |
 
 ## Demo
 
@@ -127,4 +138,4 @@ MIT
 
 ---
 
-Built for the **Gemini Live Agent Challenge 2026** by [Mahsum Aktas](https://github.com/mahsumaktas)
+Built for the **Gemini Live Agent Challenge 2026** by [Mahsum Aktas](https://github.com/mahsumaktas) #GeminiLiveAgentChallenge
