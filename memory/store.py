@@ -4,7 +4,6 @@ import uuid
 import asyncio
 import lancedb
 import pyarrow as pa
-import numpy as np
 from datetime import datetime, timezone
 from google import genai
 
