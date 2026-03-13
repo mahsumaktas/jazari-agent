@@ -13,6 +13,7 @@ from tools.memory_tools import (
 memory_agent = Agent(
     name="memory_agent",
     model="gemini-2.5-flash-native-audio-latest",
+    description="Persistent memory: store facts/goals/habits, semantic search, multimodal memories, proactive follow-up.",
     instruction="""You are the Memory Agent for Jazari, a life coaching system.
 Your role is to store and retrieve information about the user across sessions.
 
