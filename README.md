@@ -4,6 +4,10 @@
 
 **"Jazari doesn't flatter. He coaches."**
 
+## The Problem
+
+AI assistants today are goldfish — they forget everything between sessions. You share your goals, your struggles, your progress... and next time, blank slate. This makes them useless as real coaches.
+
 ## What is Jazari?
 
 Jazari is a **voice-first AI life coach** that actually remembers you. Unlike generic assistants that reset every conversation, Jazari builds a persistent understanding of who you are, what you're working toward, and whether you're actually doing it.
@@ -58,7 +62,7 @@ See [docs/architecture.html](docs/architecture.html) for the full interactive ar
 | Search | Google Search (grounding via ADK) |
 | Deploy | Google Cloud Run + Cloud Build |
 
-## Quick Start
+## Setup
 
 ### Prerequisites
 
