@@ -3,6 +3,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 export type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
+  agent?: string
 }
 
 export function useTextChat(userId: string) {
@@ -24,7 +25,7 @@ export function useTextChat(userId: string) {
       try {
         const msg = JSON.parse(event.data)
         if (msg.type === 'text' && msg.content) {
-          setMessages(prev => [...prev, { role: 'assistant', content: msg.content }])
+          setMessages(prev => [...prev, { role: 'assistant', content: msg.content, agent: msg.agent }])
           setIsLoading(false)
         } else if (msg.type === 'media_stored') {
           setMessages(prev => [...prev, { role: 'assistant', content: msg.content }])

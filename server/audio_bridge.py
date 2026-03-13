@@ -1,7 +1,6 @@
 """Audio bridge — uses ADK's run_live() for full agent pipeline in voice mode."""
 
 import asyncio
-import wave
 from google.genai import types
 
 
@@ -14,7 +13,6 @@ class AudioBridge:
         self.session_id = session_id
         self.live_queue = None
         self._running = False
-        self._debug_chunks = []
 
     async def start(self, on_audio=None, on_transcript=None):
         """Start the live session and return the event stream task."""
@@ -54,7 +52,6 @@ class AudioBridge:
                                 continue
                             if part.inline_data and on_audio:
                                 data = part.inline_data.data
-                                self._debug_chunks.append(data if isinstance(data, bytes) else bytes(data))
                                 await on_audio(data)
                     if on_transcript and hasattr(event, 'partial') and event.partial:
                         if hasattr(event, 'text') and event.text:
@@ -80,12 +77,3 @@ class AudioBridge:
         if self.live_queue:
             self.live_queue.close()
             self.live_queue = None
-        # Debug: save captured audio to compare with direct API output
-        if self._debug_chunks:
-            all_audio = b''.join(self._debug_chunks)
-            with wave.open("/tmp/pipeline_debug.wav", "wb") as wf:
-                wf.setnchannels(1)
-                wf.setsampwidth(2)
-                wf.setframerate(24000)
-                wf.writeframes(all_audio)
-            print(f"[bridge] Debug saved: /tmp/pipeline_debug.wav ({len(all_audio)} bytes, {len(self._debug_chunks)} chunks)")

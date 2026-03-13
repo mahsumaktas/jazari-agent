@@ -25,7 +25,7 @@ export function TextChat({ messages, isLoading, onSend }: Props) {
 
   return (
     <div className="w-full max-w-lg flex flex-col">
-      <div role="log" aria-label="Chat messages" className="max-h-64 overflow-y-auto space-y-3 p-4 bg-jazari-surface rounded-t-lg">
+      <div role="log" aria-label="Chat messages" className="max-h-96 overflow-y-auto space-y-3 p-4 bg-jazari-surface rounded-t-lg">
         {messages.length === 0 ? (
           <p className="text-jazari-text-dim text-sm text-center">
             Type a message to start chatting with Jazari
@@ -38,7 +38,17 @@ export function TextChat({ messages, isLoading, onSend }: Props) {
                   ? 'bg-jazari-gold/20 text-jazari-text'
                   : 'bg-jazari-surface-light text-jazari-text'
               }`}>
-                {msg.content}
+                {msg.agent && msg.agent !== 'jazari' && msg.agent !== 'jazari_full' && (
+                  <span className="text-jazari-gold text-[10px] font-medium uppercase tracking-wider block mb-1">
+                    {msg.agent.replace('_agent', '').replace('_', ' ')}
+                  </span>
+                )}
+                {msg.content.split('\n').map((line, j) => (
+                  <span key={j}>
+                    {j > 0 && <br />}
+                    {line}
+                  </span>
+                ))}
               </div>
             </div>
           ))
@@ -46,7 +56,11 @@ export function TextChat({ messages, isLoading, onSend }: Props) {
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-jazari-surface-light px-3 py-2 rounded-lg text-sm text-jazari-text-dim">
-              <span className="animate-pulse">Thinking...</span>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </span>
             </div>
           </div>
         )}

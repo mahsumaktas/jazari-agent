@@ -20,14 +20,23 @@ function App() {
     return id
   })
 
-  const { isRecording, start: startAudio, stop: stopAudio } = useAudio()
+  const { isRecording, analyserNode, start: startAudio, stop: stopAudio } = useAudio()
   const { isConnected, transcripts, connect, disconnect, sendAudio } = useWebSocket(userId)
   const textChat = useTextChat(userId)
   const [mode, setMode] = useState<'voice' | 'text'>('voice')
-  const [profile] = useState(null)
-  const [todayDone] = useState<string[]>([])
-  const [todayMissed] = useState<string[]>([])
+  const [profile, setProfile] = useState(null)
+  const [todayDone, setTodayDone] = useState<string[]>([])
+  const [todayMissed, setTodayMissed] = useState<string[]>([])
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    const base = `${window.location.protocol}//${window.location.host}`
+    fetch(`${base}/api/profile/${userId}`).then(r => r.json()).then(setProfile).catch(() => {})
+    fetch(`${base}/api/habits/${userId}`).then(r => r.json()).then(data => {
+      setTodayDone(data.done || [])
+      setTodayMissed(data.missed || [])
+    }).catch(() => {})
+  }, [userId])
 
   useEffect(() => {
     if (mode === 'text' && !textChat.isConnected) {
@@ -97,6 +106,14 @@ function App() {
           <span className="text-jazari-text-dim">
             {(mode === 'voice' ? isConnected : textChat.isConnected) ? 'Connected' : 'Disconnected'}
           </span>
+          {mode === 'text' && !textChat.isConnected && (
+            <button
+              onClick={() => textChat.connect()}
+              className="text-jazari-gold hover:text-jazari-gold-light ml-1 underline"
+            >
+              Retry
+            </button>
+          )}
         </div>
 
         <h1
@@ -133,7 +150,7 @@ function App() {
 
         {mode === 'voice' ? (
           <>
-            <Waveform isActive={isRecording} />
+            <Waveform isActive={isRecording} analyserNode={analyserNode} />
 
             <div className="flex items-center gap-4">
               <CameraButton onCapture={handlePhotoCapture} />
@@ -177,7 +194,7 @@ function App() {
 
       {/* Right panel */}
       <aside className="w-64 p-4 hidden md:block">
-        <Dashboard done={todayDone} missed={todayMissed} />
+        <Dashboard done={todayDone} missed={todayMissed} userId={userId} />
       </aside>
     </div>
   )

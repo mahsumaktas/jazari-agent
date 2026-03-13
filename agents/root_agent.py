@@ -88,5 +88,6 @@ root_agent_with_subs = Agent(
     model="gemini-2.5-flash-native-audio-latest",
     instruction=root_agent.instruction,
     before_model_callback=safety_guardrail,
+    tools=[store_memory, search_memory, get_decaying_goals, save_conversation_summary],
     sub_agents=[memory_agent, career_agent, health_agent, finance_agent, discipline_agent, search_agent],
 )

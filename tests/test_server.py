@@ -1,6 +1,10 @@
 """Tests for FastAPI server endpoints."""
 import pytest
 from unittest.mock import patch, MagicMock
+from httpx import AsyncClient, ASGITransport
+
+with patch("memory.backup.restore_from_firestore", return_value={"status": "empty", "count": 0, "skipped": 0}):
+    from server.main import app
 
 
 @pytest.fixture
@@ -56,3 +60,35 @@ def test_media_memory_invalid_base64(client):
     })
     data = response.json()
     assert "error" in data
+
+
+@pytest.mark.asyncio
+async def test_habits_endpoint_returns_structure():
+    """GET /api/habits/{user_id} returns expected structure."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/habits/test-user")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "done" in data
+    assert "missed" in data
+    assert isinstance(data["done"], list)
+    assert isinstance(data["missed"], list)
+
+
+@pytest.mark.asyncio
+async def test_profile_endpoint_returns():
+    """GET /api/profile/{user_id} returns without error."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/profile/test-user")
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_memories_endpoint_returns_structure():
+    """GET /api/memories/{user_id} returns expected structure."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/memories/test-user?limit=5")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "memories" in data
+    assert isinstance(data["memories"], list)

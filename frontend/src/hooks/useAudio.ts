@@ -4,6 +4,7 @@ const TARGET_RATE = 24000
 
 export function useAudio() {
   const [isRecording, setIsRecording] = useState(false)
+  const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const processorRef = useRef<ScriptProcessorNode | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -20,6 +21,13 @@ export function useAudio() {
     const nativeRate = ctx.sampleRate
 
     const source = ctx.createMediaStreamSource(stream)
+
+    const analyser = ctx.createAnalyser()
+    analyser.fftSize = 64
+    analyser.smoothingTimeConstant = 0.8
+    source.connect(analyser)
+    setAnalyserNode(analyser)
+
     const processor = ctx.createScriptProcessor(4096, 1, 1)
     processorRef.current = processor
 
@@ -61,8 +69,9 @@ export function useAudio() {
     processorRef.current?.disconnect()
     audioContextRef.current?.close()
     streamRef.current?.getTracks().forEach(t => t.stop())
+    setAnalyserNode(null)
     setIsRecording(false)
   }, [])
 
-  return { isRecording, start, stop }
+  return { isRecording, analyserNode, start, stop }
 }

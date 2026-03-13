@@ -1,0 +1,9 @@
+{
+  "name": "Jazari — AI Life Coach",
+  "short_name": "Jazari",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0D0D",
+  "theme_color": "#C5A55A",
+  "icons": []
+}

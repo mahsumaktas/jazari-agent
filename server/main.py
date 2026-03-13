@@ -113,6 +113,50 @@ async def health():
     return {"status": "ok", "agent": "jazari"}
 
 
+@app.get("/api/habits/{user_id}")
+async def get_habits(user_id: str):
+    """Get today's habits for the dashboard."""
+    from tools.habit_tools import accountability_check, habit_streak
+    try:
+        check = await asyncio.to_thread(accountability_check, user_id=user_id)
+        streaks = await asyncio.to_thread(habit_streak, user_id=user_id)
+        return {
+            "done": check.get("done_today", []),
+            "missed": check.get("missed_today", []),
+            "streaks": streaks.get("habits", []),
+        }
+    except Exception:
+        return {"done": [], "missed": [], "streaks": []}
+
+
+@app.get("/api/profile/{user_id}")
+async def get_profile(user_id: str):
+    """Get user profile for the side panel."""
+    from tools.memory_tools import get_user_profile
+    try:
+        profile = await asyncio.to_thread(get_user_profile, user_id=user_id)
+        return profile
+    except Exception:
+        return None
+
+
+@app.get("/api/memories/{user_id}")
+async def get_recent_memories(user_id: str, limit: int = 10):
+    """Get recent memories for the memory timeline."""
+    from memory.store import MemoryStore
+    try:
+        store = MemoryStore()
+        # Get recent memories by searching with a broad query
+        results = await store.search(
+            query="recent activities and goals",
+            user_id=user_id,
+            limit=limit,
+        )
+        return {"memories": results}
+    except Exception:
+        return {"memories": []}
+
+
 @app.websocket("/ws")
 async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
     """Text WebSocket — for testing without voice."""
@@ -122,6 +166,30 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
         app_name="jazari",
         user_id=userId,
     )
+
+    # Send initial greeting
+    try:
+        greeting_content = types.Content(
+            role="user",
+            parts=[types.Part.from_text("I just connected. Greet me briefly and check if you remember anything about me using search_memory.")],
+        )
+        greeting_response = ""
+        async for event in text_runner.run_async(
+            user_id=userId,
+            session_id=session.id,
+            new_message=greeting_content,
+        ):
+            if event.is_final_response() and event.content and event.content.parts:
+                greeting_response = event.content.parts[0].text or ""
+
+        if greeting_response:
+            await websocket.send_json({
+                "type": "text",
+                "content": greeting_response,
+                "agent": "jazari",
+            })
+    except Exception:
+        pass  # Don't block on greeting failure
 
     try:
         while True:
@@ -136,6 +204,7 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
                 )
 
                 response_text = ""
+                agent_name = "jazari"
                 async for event in text_runner.run_async(
                     user_id=userId,
                     session_id=session.id,
@@ -143,11 +212,12 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
                 ):
                     if event.is_final_response() and event.content and event.content.parts:
                         response_text = event.content.parts[0].text or ""
+                        agent_name = event.author
 
                 await websocket.send_json({
                     "type": "text",
                     "content": response_text,
-                    "agent": "jazari",
+                    "agent": agent_name,
                 })
 
             elif msg.get("type") == "media":
