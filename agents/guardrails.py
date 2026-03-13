@@ -38,7 +38,7 @@ async def safety_guardrail(
         if topic in user_text:
             return types.Content(
                 role="model",
-                parts=[types.Part.from_text(SAFETY_RESPONSE)],
+                parts=[types.Part.from_text(text=SAFETY_RESPONSE)],
             )
 
     return None
