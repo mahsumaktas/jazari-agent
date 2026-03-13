@@ -23,7 +23,7 @@ class AudioBridge:
         self._running = True
 
         run_config = RunConfig(
-            response_modalities=["AUDIO"],
+            response_modalities=[types.Modality.AUDIO],
             speech_config=types.SpeechConfig(
                 voice_config=types.VoiceConfig(
                     prebuilt_voice_config=types.PrebuiltVoiceConfig(
@@ -31,9 +31,9 @@ class AudioBridge:
                     )
                 )
             ),
-            output_audio_transcription=True,
-            input_audio_transcription=True,
-            proactive_audio=True,
+            output_audio_transcription=types.AudioTranscriptionConfig(),
+            input_audio_transcription=types.AudioTranscriptionConfig(),
+            enable_affective_dialog=True,
         )
 
         async def consume_events():
@@ -54,9 +54,11 @@ class AudioBridge:
                             if part.inline_data and on_audio:
                                 data = part.inline_data.data
                                 await on_audio(data)
-                    if on_transcript and hasattr(event, 'partial') and event.partial:
-                        if hasattr(event, 'text') and event.text:
-                            await on_transcript(event.text)
+                    if on_transcript:
+                        if event.input_transcription:
+                            await on_transcript(f"[user] {event.input_transcription}")
+                        if event.output_transcription:
+                            await on_transcript(event.output_transcription)
                 print("[bridge] run_live ended normally")
             except Exception as e:
                 print(f"[bridge] run_live error: {type(e).__name__}: {e}")

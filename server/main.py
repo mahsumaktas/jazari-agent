@@ -171,7 +171,7 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
     try:
         greeting_content = types.Content(
             role="user",
-            parts=[types.Part.from_text("I just connected. Greet me briefly and check if you remember anything about me using search_memory.")],
+            parts=[types.Part.from_text(text="I just connected. Greet me briefly and check if you remember anything about me using search_memory.")],
         )
         greeting_response = ""
         async for event in text_runner.run_async(
@@ -222,7 +222,7 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
 
                 content = types.Content(
                     role="user",
-                    parts=[types.Part.from_text(user_text)],
+                    parts=[types.Part.from_text(text=user_text)],
                 )
 
                 response_text = ""
