@@ -82,6 +82,19 @@ Each agent has a distinct personality — the Discipline Coach accepts no excuse
 
 3. **Cross-modal search is a "wow" moment.** Asking "what did I eat?" and getting back a photo you took three days ago — via text query finding an image embedding — consistently surprises people.
 
+## Production Quality
+
+We treated this hackathon project like production software:
+
+- **81 automated tests** covering agents, memory tools, API endpoints, WebSocket validation, and edge cases
+- **Real-time audio visualization** using Web Audio API's AnalyserNode — the waveform responds to actual microphone input, not fake CSS animation
+- **Memory timeline dashboard** showing stored memories, habits, and goals
+- **Sub-agent delegation labels** showing which specialist (career, health, finance) handled each response
+- **Error boundary**, input validation, graceful agent failure handling
+- **Keyboard shortcuts** (Space to talk, Escape to stop) and screen reader accessibility
+- **PWA manifest** for installable mobile experience
+- **Non-root Docker container** with health checks
+
 ## Try It
 
 The code is open source: [github.com/mahsumaktas/jazari-agent](https://github.com/mahsumaktas/jazari-agent)
@@ -91,7 +104,10 @@ git clone https://github.com/mahsumaktas/jazari-agent.git
 cd jazari-agent
 pip install -r requirements.txt
 cp .env.example .env  # Add your GOOGLE_API_KEY
-python server/main.py
+python -m server.main
+
+# Optional: seed demo data for impressive first conversation
+python scripts/seed_demo.py demo-user
 ```
 
 Built with Google ADK, Gemini 2.5 Flash, Gemini Embedding 2, LanceDB, Cloud Run, Firestore, and React.
