@@ -4,11 +4,12 @@ import type { ChatMessage } from '../hooks/useTextChat'
 interface Props {
   messages: ChatMessage[]
   isLoading: boolean
+  loadingStatus?: string
   onSend: (text: string) => void
   onPhotoCapture?: (base64: string) => void
 }
 
-export function TextChat({ messages, isLoading, onSend, onPhotoCapture }: Props) {
+export function TextChat({ messages, isLoading, loadingStatus, onSend, onPhotoCapture }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -58,11 +59,15 @@ export function TextChat({ messages, isLoading, onSend, onPhotoCapture }: Props)
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-jazari-surface-light px-3 py-2 rounded-lg text-sm text-jazari-text-dim">
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </span>
+              {loadingStatus ? (
+                <span className="text-jazari-gold text-xs animate-pulse">{loadingStatus}</span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-jazari-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+              )}
             </div>
           </div>
         )}

@@ -227,16 +227,26 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
 
                 response_text = ""
                 agent_name = "jazari"
+                last_agent = None
                 try:
                     async for event in text_runner.run_async(
                         user_id=userId,
                         session_id=session.id,
                         new_message=content,
                     ):
+                        # Send routing status when agent changes
+                        if hasattr(event, 'author') and event.author and event.author != last_agent:
+                            last_agent = event.author
+                            if event.author not in ('jazari', 'jazari_full', 'user'):
+                                await websocket.send_json({
+                                    "type": "status",
+                                    "content": f"Consulting {event.author.replace('_agent', '').replace('_', ' ')}...",
+                                })
+
                         if event.is_final_response() and event.content and event.content.parts:
                             response_text = event.content.parts[0].text or ""
                             agent_name = event.author
-                except Exception as e:
+                except Exception:
                     response_text = "Sorry, I encountered an issue. Please try again."
                     agent_name = "jazari"
 

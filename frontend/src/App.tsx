@@ -224,6 +224,7 @@ function App() {
             <TextChat
               messages={textChat.messages}
               isLoading={textChat.isLoading}
+              loadingStatus={textChat.loadingStatus}
               onSend={textChat.sendMessage}
               onPhotoCapture={handlePhotoCapture}
             />

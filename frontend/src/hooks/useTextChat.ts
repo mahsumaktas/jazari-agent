@@ -9,6 +9,7 @@ export type ChatMessage = {
 export function useTextChat(userId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingStatus, setLoadingStatus] = useState('')
   const wsRef = useRef<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
 
@@ -24,9 +25,12 @@ export function useTextChat(userId: string) {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data)
-        if (msg.type === 'text' && msg.content) {
+        if (msg.type === 'status') {
+          setLoadingStatus(msg.content)
+        } else if (msg.type === 'text' && msg.content) {
           setMessages(prev => [...prev, { role: 'assistant', content: msg.content, agent: msg.agent }])
           setIsLoading(false)
+          setLoadingStatus('')
         } else if (msg.type === 'media_stored') {
           setMessages(prev => [...prev, { role: 'assistant', content: msg.content }])
         }
@@ -58,5 +62,5 @@ export function useTextChat(userId: string) {
     wsRef.current?.close()
   }, [])
 
-  return { messages, isLoading, isConnected, connect, sendMessage }
+  return { messages, isLoading, loadingStatus, isConnected, connect, sendMessage }
 }
