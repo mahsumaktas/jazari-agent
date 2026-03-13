@@ -28,24 +28,32 @@ def restore_from_firestore(db_path: str = "/tmp/lancedb"):
     docs = fs_db.collection(BACKUP_COLLECTION).stream()
 
     records = []
+    skipped = 0
     for doc in docs:
         data = doc.to_dict()
-        records.append({
-            "id": data["id"],
-            "content": data["content"],
-            "vector": data["vector"],
-            "memory_type": data["memory_type"],
-            "importance": float(data["importance"]),
-            "modality": data["modality"],
-            "media_uri": data.get("media_uri", ""),
-            "created_at": data["created_at"],
-            "last_accessed": data["last_accessed"],
-            "decay_factor": float(data["decay_factor"]),
-            "user_id": data["user_id"],
-        })
+        # Skip incomplete records
+        if not all(k in data for k in ("id", "content", "vector", "user_id")):
+            skipped += 1
+            continue
+        try:
+            records.append({
+                "id": data["id"],
+                "content": data["content"],
+                "vector": data["vector"],
+                "memory_type": data.get("memory_type", "fact"),
+                "importance": float(data.get("importance", 0.5)),
+                "modality": data.get("modality", "text"),
+                "media_uri": data.get("media_uri", ""),
+                "created_at": data.get("created_at", datetime.now(timezone.utc).isoformat()),
+                "last_accessed": data.get("last_accessed", datetime.now(timezone.utc).isoformat()),
+                "decay_factor": float(data.get("decay_factor", 15.0)),
+                "user_id": data["user_id"],
+            })
+        except (ValueError, TypeError):
+            skipped += 1
 
     if not records:
-        return {"status": "empty", "count": 0}
+        return {"status": "empty", "count": 0, "skipped": skipped}
 
     db = lancedb.connect(db_path)
     try:
@@ -54,4 +62,4 @@ def restore_from_firestore(db_path: str = "/tmp/lancedb"):
         pass
 
     db.create_table(TABLE_NAME, records, schema=SCHEMA)
-    return {"status": "restored", "count": len(records)}
+    return {"status": "restored", "count": len(records), "skipped": skipped}
