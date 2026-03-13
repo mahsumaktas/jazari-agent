@@ -16,6 +16,7 @@ load_dotenv()
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from google import genai
 from google.genai import types
@@ -58,6 +59,14 @@ async def lifespan(app):
     yield
 
 app = FastAPI(title="Jazari Agent", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Shared services — memory service enables cross-session recall
 session_service = InMemorySessionService()
@@ -233,9 +242,21 @@ async def upload_media_memory(request: Request):
     from tools.memory_tools import store_media_memory
 
     body = await request.json()
-    user_id = body["user_id"]
-    modality = body["modality"]
-    media_bytes = base64.b64decode(body["data"])
+    user_id = body.get("user_id", "").strip()
+    modality = body.get("modality", "").strip()
+    data_b64 = body.get("data", "")
+
+    if not user_id or not modality or not data_b64:
+        return {"error": "Missing required fields: user_id, modality, data"}
+
+    if modality not in ("image", "audio"):
+        return {"error": f"Invalid modality: {modality}. Must be 'image' or 'audio'."}
+
+    try:
+        media_bytes = base64.b64decode(data_b64)
+    except Exception:
+        return {"error": "Invalid base64 data"}
+
     description = body.get("description", "")
     ext = "jpg" if modality == "image" else "wav"
 

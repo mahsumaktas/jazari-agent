@@ -7,6 +7,7 @@ from tools.memory_tools import (
     store_media_memory,
     get_decaying_goals,
     get_user_profile,
+    save_conversation_summary,
 )
 
 memory_agent = Agent(
@@ -30,6 +31,10 @@ Proactive coaching:
 - Use get_decaying_goals to find goals/habits the user hasn't mentioned
 - Report these to the root agent for follow-up
 
+Session wrap-up:
+- Use save_conversation_summary at end of sessions to persist key points
+- Include: topics discussed, commitments made, new goals, emotional state
+
 Always be precise. Never fabricate memories.""",
-    tools=[store_memory, search_memory, store_media_memory, get_decaying_goals, get_user_profile],
+    tools=[store_memory, search_memory, store_media_memory, get_decaying_goals, get_user_profile, save_conversation_summary],
 )

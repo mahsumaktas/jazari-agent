@@ -74,15 +74,18 @@ async def store_media_memory(
     Returns:
         dict with memory_id and generated description.
     """
-    store = _get_store()
-    return await store.store(
-        user_id=user_id,
-        content=content,
-        memory_type=memory_type,
-        modality=modality,
-        media_bytes=media_bytes,
-        media_uri=media_uri,
-    )
+    try:
+        store = _get_store()
+        return await store.store(
+            user_id=user_id,
+            content=content,
+            memory_type=memory_type,
+            modality=modality,
+            media_bytes=media_bytes,
+            media_uri=media_uri,
+        )
+    except Exception as e:
+        return {"error": f"Failed to store media memory: {type(e).__name__}", "message": "Media received but couldn't persist it."}
 
 
 async def get_decaying_goals(user_id: str) -> dict:
@@ -102,6 +105,28 @@ async def get_decaying_goals(user_id: str) -> dict:
         return {"decaying_goals": decaying, "count": len(decaying)}
     except Exception:
         return {"decaying_goals": [], "count": 0}
+
+
+async def save_conversation_summary(user_id: str, summary: str, key_points: str) -> dict:
+    """Save a conversation summary at the end of a session.
+
+    Args:
+        user_id: The user's unique identifier.
+        summary: 1-2 sentence summary of the conversation.
+        key_points: Comma-separated key points discussed.
+
+    Returns:
+        dict with confirmation.
+    """
+    try:
+        store = _get_store()
+        return await store.store(
+            user_id=user_id,
+            content=f"Session summary: {summary}. Key points: {key_points}",
+            memory_type="insight",
+        )
+    except Exception:
+        return {"message": "Summary noted but not persisted."}
 
 
 def get_user_profile(user_id: str) -> dict:

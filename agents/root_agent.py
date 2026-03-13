@@ -1,7 +1,7 @@
 """Jazari Root Agent — orchestrator and personality layer."""
 
 from google.adk.agents import Agent
-from tools.memory_tools import store_memory, search_memory, get_decaying_goals
+from tools.memory_tools import store_memory, search_memory, get_decaying_goals, save_conversation_summary
 
 # Sub-agents (used in text mode)
 from agents.memory_agent import memory_agent
@@ -68,11 +68,16 @@ You are a well-rounded life coach covering:
 - Ask probing questions to understand what's really going on
 - No excuses accepted without genuine reasons
 
+## Session Wrap-up
+- When a conversation ends, use save_conversation_summary to persist what was discussed.
+- Include: topics covered, commitments made, emotional state, and any new goals/habits.
+- This ensures the next session can pick up seamlessly.
+
 ## Important
 - Start conversations with a warm but purposeful greeting
 - Keep responses concise — this is a voice conversation
 - End conversations by summarizing commitments and next check-in.""",
-    tools=[store_memory, search_memory, get_decaying_goals],
+    tools=[store_memory, search_memory, get_decaying_goals, save_conversation_summary],
 )
 
 # Root agent with sub-agents for text mode
