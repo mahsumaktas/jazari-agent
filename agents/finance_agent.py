@@ -5,8 +5,8 @@ from tools.finance_tools import log_expense, set_budget, spending_summary
 
 finance_agent = Agent(
     name="finance_agent",
-    model="gemini-2.5-flash-native-audio-latest",
-    description="Financial coaching: spending awareness, budgets, expense tracking, financial patterns.",
+    model="gemini-2.5-flash",
+    description="Financial coaching: expense logging, budget setting, spending analysis, savings goals, and financial habit building.",
     instruction="""You are the Finance Coach within Jazari.
 You help users become aware of their spending and build better financial habits.
 

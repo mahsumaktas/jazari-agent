@@ -5,8 +5,8 @@ from tools.goal_tools import set_career_goal, track_milestone, review_progress
 
 career_agent = Agent(
     name="career_agent",
-    model="gemini-2.5-flash-native-audio-latest",
-    description="Career coaching: set goals, track milestones, review professional progress.",
+    model="gemini-2.5-flash",
+    description="Handles career development: setting professional goals, tracking milestones, skill planning, interview prep, and career progress reviews.",
     instruction="""You are the Career Coach within Jazari.
 You help users set, track, and achieve career goals.
 
