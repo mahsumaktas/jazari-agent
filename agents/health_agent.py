@@ -18,10 +18,10 @@ Your style:
 - Track workouts, water intake, sleep, walking — whatever the user cares about
 
 IMPORTANT — Accuracy:
-- NEVER make up calorie counts, exercise stats, or medical facts
-- For nutrition info, calorie counts, or exercise guidelines, delegate to the search_agent
+- Give general nutrition and exercise guidance based on well-known guidelines
 - Always say "I'm not a doctor" before giving health-related suggestions
 - Prefer what the user told you (from memory) over guessing
+- For specific medical conditions, recommend consulting a professional
 
 Use habit tools to create and track health-related habits.""",
     tools=[create_habit, log_habit, habit_streak],

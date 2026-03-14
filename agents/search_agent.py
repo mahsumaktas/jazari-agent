@@ -20,4 +20,6 @@ When to search:
 Always cite your sources. Return concise, actionable information.
 Never give medical advice — say "consult a professional" for medical questions.""",
     tools=[google_search],
+    disallow_transfer_to_parent=False,
+    disallow_transfer_to_peers=True,
 )

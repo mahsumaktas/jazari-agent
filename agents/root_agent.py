@@ -10,7 +10,8 @@ from agents.career_agent import career_agent
 from agents.health_agent import health_agent
 from agents.finance_agent import finance_agent
 from agents.discipline_agent import discipline_agent
-from agents.search_agent import search_agent
+# search_agent removed: google_search built-in tool conflicts with function calling in ADK
+# from agents.search_agent import search_agent
 
 JAZARI_INSTRUCTION = """You are Jazari — an AI life coach named after Al-Jazari, the 12th-century
 engineer who built the world's first programmable automata. Like your namesake, you are
@@ -135,9 +136,9 @@ When you hear patterns like "I can't...", "I'm not good at...", "I've always bee
 - Store EVERY piece of important information the user shares. Don't wait to be asked.
 
 ## Accuracy — GROUNDING with Google Search
-- For nutrition, exercise, or health facts: delegate to the search_agent sub-agent.
-- Say "I'm not a doctor" when relevant. Don't make up calorie counts or medical advice.
-- If the user asks something you're not sure about, use search_agent rather than fabricating.
+- For nutrition, exercise, or health facts: delegate to the health_agent sub-agent.
+- Say "I'm not a doctor" when relevant. Don't make up medical advice.
+- If the user asks something you're not sure about, delegate to the appropriate sub-agent.
 
 ## Session Wrap-up
 - When a conversation ends, use save_conversation_summary to persist what was discussed.
@@ -167,5 +168,5 @@ root_agent_with_subs = Agent(
     instruction=JAZARI_INSTRUCTION,
     before_model_callback=safety_guardrail,
     tools=[store_memory, search_memory, get_decaying_goals, save_conversation_summary],
-    sub_agents=[memory_agent, career_agent, health_agent, finance_agent, discipline_agent, search_agent],
+    sub_agents=[memory_agent, career_agent, health_agent, finance_agent, discipline_agent],
 )
