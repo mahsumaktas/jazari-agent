@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 interface Props {
   done: string[]
   missed: string[]
+  goals: string[]
   userId: string
 }
 
@@ -13,7 +14,7 @@ interface Memory {
   modality: string
 }
 
-export function Dashboard({ done, missed, userId }: Props) {
+export function Dashboard({ done, missed, goals, userId }: Props) {
   const [memories, setMemories] = useState<Memory[]>([])
 
   useEffect(() => {
@@ -66,8 +67,19 @@ export function Dashboard({ done, missed, userId }: Props) {
             ))}
           </div>
         )}
-        {done.length === 0 && missed.length === 0 && (
-          <p className="text-jazari-text-dim text-sm">No habits tracked yet</p>
+        {goals.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-jazari-text-dim/50 text-[10px] uppercase tracking-wider mt-1">Goals</p>
+            {goals.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="text-jazari-gold">&#9670;</span>
+                <span className="text-jazari-text-dim">{item}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {done.length === 0 && missed.length === 0 && goals.length === 0 && (
+          <p className="text-jazari-text-dim text-sm">No habits or goals yet</p>
         )}
       </div>
 

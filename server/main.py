@@ -115,19 +115,21 @@ async def health():
 
 @app.get("/api/habits/{user_id}")
 async def get_habits(user_id: str):
-    """Get habits from LanceDB memories."""
+    """Get habits and goals from LanceDB memories."""
     from memory.store import MemoryStore
     try:
         store = MemoryStore()
-        habits = await store.search(user_id=user_id, query="habits routines daily weekly", limit=5)
-        habit_names = [h.get("content", "")[:60] for h in habits if h.get("memory_type") in ("habit", "goal")]
+        results = await store.search(user_id=user_id, query="goals habits targets objectives routines", limit=8)
+        goals = [h.get("content", "")[:60] for h in results if h.get("memory_type") == "goal"]
+        habits = [h.get("content", "")[:60] for h in results if h.get("memory_type") == "habit"]
         return {
             "done": [],
-            "missed": habit_names,
+            "missed": habits,
             "streaks": [],
+            "goals": goals,
         }
     except Exception:
-        return {"done": [], "missed": [], "streaks": []}
+        return {"done": [], "missed": [], "streaks": [], "goals": []}
 
 
 @app.get("/api/profile/{user_id}")
@@ -400,14 +402,8 @@ async def websocket_audio(websocket: WebSocket, userId: str = "anonymous"):
                     content=summary[:500],
                     memory_type="insight",
                 )
-                # Also store individual important user statements
-                for line in user_lines:
-                    if len(line) > 15:  # Skip very short utterances
-                        await store.store(
-                            user_id=userId,
-                            content=line,
-                            memory_type="fact",
-                        )
+                # Note: individual lines NOT stored separately to avoid duplicates
+                # The summary above captures the key points from voice
                 print(f"[audio] Auto-saved {len(user_lines)} voice memories for {userId}")
             except Exception as e:
                 print(f"[audio] Auto-save failed: {e}")

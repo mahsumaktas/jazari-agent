@@ -27,6 +27,7 @@ function App() {
   const [profile, setProfile] = useState(null)
   const [todayDone, setTodayDone] = useState<string[]>([])
   const [todayMissed, setTodayMissed] = useState<string[]>([])
+  const [goals, setGoals] = useState<string[]>([])
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
   const [mediaStatus, setMediaStatus] = useState<'idle' | 'storing' | 'stored'>('idle')
 
@@ -37,6 +38,7 @@ function App() {
       fetch(`${base}/api/habits/${userId}`).then(r => r.json()).then(data => {
         setTodayDone(data.done || [])
         setTodayMissed(data.missed || [])
+        setGoals(data.goals || [])
       }).catch(() => {})
     }
     fetchProfile()
@@ -245,7 +247,7 @@ function App() {
 
       {/* Right panel */}
       <aside className="w-64 p-4 hidden md:block">
-        <Dashboard done={todayDone} missed={todayMissed} userId={userId} />
+        <Dashboard done={todayDone} missed={todayMissed} goals={goals} userId={userId} />
       </aside>
     </div>
   )
