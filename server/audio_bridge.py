@@ -1,7 +1,11 @@
 """Audio bridge — uses ADK's run_live() for full agent pipeline in voice mode."""
 
 import asyncio
+import re
 from google.genai import types
+
+# Remove control characters (like <ctrl46>) from transcription
+_CTRL_RE = re.compile(r'<ctrl\d+>|[\x00-\x08\x0b\x0c\x0e-\x1f]')
 
 
 class AudioBridge:
@@ -56,9 +60,17 @@ class AudioBridge:
                                 await on_audio(data)
                     if on_transcript:
                         if event.input_transcription:
-                            await on_transcript(f"[user] {event.input_transcription}")
+                            text = getattr(event.input_transcription, 'text', str(event.input_transcription))
+                            finished = getattr(event.input_transcription, 'finished', True)
+                            text = _CTRL_RE.sub('', text).strip()
+                            if text:
+                                await on_transcript(text, "user", finished)
                         if event.output_transcription:
-                            await on_transcript(event.output_transcription)
+                            text = getattr(event.output_transcription, 'text', str(event.output_transcription))
+                            finished = getattr(event.output_transcription, 'finished', True)
+                            text = _CTRL_RE.sub('', text).strip()
+                            if text:
+                                await on_transcript(text, "jazari", finished)
                 print("[bridge] run_live ended normally")
             except Exception as e:
                 print(f"[bridge] run_live error: {type(e).__name__}: {e}")

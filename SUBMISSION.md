@@ -24,7 +24,7 @@ Jazari solves this with three innovations:
 
 - **Google ADK** for multi-agent orchestration (7 specialized agents)
 - **Gemini 2.5 Flash Native Audio** for real-time voice conversation
-- **Gemini Embedding 2** (gemini-embedding-exp-03-07) for multimodal memory vectors
+- **Gemini Embedding 2** (gemini-embedding-2-preview) for multimodal memory vectors
 - **Gemini Flash** for importance scoring and media description
 - **Google Search** tool for grounding factual claims (nutrition, exercise)
 - **LanceDB** for vector similarity search
@@ -72,7 +72,7 @@ User → Frontend (React) → WebSocket/REST → Cloud Run (FastAPI)
 
 ## Production Quality
 
-- **75 automated tests** covering agents, memory, tools, API endpoints, and edge cases
+- **ICF-aligned coaching methodology** with GROW model and Wheel of Life intake assessment
 - **Error boundary** catches frontend crashes with graceful recovery
 - **Real-time audio visualization** using Web Audio API's AnalyserNode
 - **Memory timeline** dashboard showing stored memories, habits, and goals

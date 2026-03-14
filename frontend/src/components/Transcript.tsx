@@ -1,35 +1,20 @@
 import { useEffect, useRef } from 'react'
-
-interface TranscriptMessage {
-  type: string
-  content: string
-}
+import type { TranscriptMessage } from '../hooks/useWebSocket'
 
 interface Props {
   messages: TranscriptMessage[]
+  partialUser?: string
+  partialJazari?: string
 }
 
-function formatTimestamp(): string {
-  const now = new Date()
-  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-export function Transcript({ messages }: Props) {
+export function Transcript({ messages, partialUser, partialJazari }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
-  const timestampsRef = useRef<Map<number, string>>(new Map())
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, partialUser, partialJazari])
 
-  // Assign timestamps to new messages
-  messages.forEach((_, i) => {
-    if (!timestampsRef.current.has(i)) {
-      timestampsRef.current.set(i, formatTimestamp())
-    }
-  })
-
-  if (messages.length === 0) {
+  if (messages.length === 0 && !partialUser && !partialJazari) {
     return (
       <div role="log" aria-label="Voice transcript" className="bg-jazari-surface rounded-lg p-6 flex flex-col items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-jazari-text-dim/30">
@@ -50,25 +35,44 @@ export function Transcript({ messages }: Props) {
 
   return (
     <div role="log" aria-label="Voice transcript" className="bg-jazari-surface rounded-lg p-4 max-h-48 overflow-y-auto space-y-2">
-      {messages.map((msg, i) => {
-        const isUser = msg.content.startsWith('[user]')
-        const displayContent = isUser ? msg.content.replace(/^\[user\]\s*/, '') : msg.content
-        const timestamp = timestampsRef.current.get(i) || ''
+      {messages.map((msg, i) => (
+        <div key={i} className="text-sm flex items-start gap-2" style={{ animation: 'fadeInUp 0.3s ease' }}>
+          <span className="text-[10px] text-jazari-text-dim/50 shrink-0 mt-0.5 tabular-nums">
+            {msg.timestamp}
+          </span>
+          <span className={`text-[10px] font-medium uppercase tracking-wider shrink-0 mt-0.5 ${
+            msg.sender === 'user' ? 'text-jazari-gold' : 'text-emerald-400'
+          }`}>
+            {msg.sender === 'user' ? 'You' : 'Jazari'}
+          </span>
+          <span className="text-jazari-text">{msg.content}</span>
+        </div>
+      ))}
 
-        return (
-          <div key={i} className="text-sm flex items-start gap-2" style={{ animation: 'fadeInUp 0.3s ease' }}>
-            <span className="text-[10px] text-jazari-text-dim/50 shrink-0 mt-0.5 tabular-nums">
-              {timestamp}
-            </span>
-            <span className={`text-[10px] font-medium uppercase tracking-wider shrink-0 mt-0.5 ${
-              isUser ? 'text-jazari-gold' : 'text-jazari-text-dim'
-            }`}>
-              {isUser ? 'You' : 'Jazari'}
-            </span>
-            <span className="text-jazari-text">{displayContent}</span>
-          </div>
-        )
-      })}
+      {/* Live partial transcripts — typing indicator */}
+      {partialUser && (
+        <div className="text-sm flex items-start gap-2 opacity-50">
+          <span className="text-[10px] text-jazari-text-dim/50 shrink-0 mt-0.5 tabular-nums">
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-wider shrink-0 mt-0.5 text-jazari-gold">
+            You
+          </span>
+          <span className="text-jazari-text italic">{partialUser}...</span>
+        </div>
+      )}
+      {partialJazari && (
+        <div className="text-sm flex items-start gap-2 opacity-50">
+          <span className="text-[10px] text-jazari-text-dim/50 shrink-0 mt-0.5 tabular-nums">
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-wider shrink-0 mt-0.5 text-emerald-400">
+            Jazari
+          </span>
+          <span className="text-jazari-text italic">{partialJazari}...</span>
+        </div>
+      )}
+
       <div ref={bottomRef} />
     </div>
   )

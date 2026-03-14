@@ -115,15 +115,16 @@ async def health():
 
 @app.get("/api/habits/{user_id}")
 async def get_habits(user_id: str):
-    """Get today's habits for the dashboard."""
-    from tools.habit_tools import accountability_check, habit_streak
+    """Get habits from LanceDB memories."""
+    from memory.store import MemoryStore
     try:
-        check = await asyncio.to_thread(accountability_check, user_id=user_id)
-        streaks = await asyncio.to_thread(habit_streak, user_id=user_id)
+        store = MemoryStore()
+        habits = await store.search(user_id=user_id, query="habits routines daily weekly", limit=5)
+        habit_names = [h.get("content", "")[:60] for h in habits if h.get("memory_type") in ("habit", "goal")]
         return {
-            "done": check.get("done_today", []),
-            "missed": check.get("missed_today", []),
-            "streaks": streaks.get("habits", []),
+            "done": [],
+            "missed": habit_names,
+            "streaks": [],
         }
     except Exception:
         return {"done": [], "missed": [], "streaks": []}
@@ -131,11 +132,31 @@ async def get_habits(user_id: str):
 
 @app.get("/api/profile/{user_id}")
 async def get_profile(user_id: str):
-    """Get user profile for the side panel."""
-    from tools.memory_tools import get_user_profile
+    """Get user profile from LanceDB memories."""
+    from memory.store import MemoryStore
     try:
-        profile = await asyncio.to_thread(get_user_profile, user_id=user_id)
-        return profile
+        store = MemoryStore()
+        # Search for identity facts
+        facts = await store.search(user_id=user_id, query="name job profession who is the user", limit=3)
+        goals = await store.search(user_id=user_id, query="goals targets objectives wants to achieve", limit=5)
+        habits = await store.search(user_id=user_id, query="habits routines daily weekly exercise", limit=5)
+
+        # Extract name from facts
+        name = None
+        for f in facts:
+            content = f.get("content", "").lower()
+            if "name is" in content or "name:" in content or "adı" in content:
+                name = f.get("content", "")[:60]
+                break
+
+        active_goals = [g for g in goals if g.get("memory_type") in ("goal", "habit")]
+        habit_list = [{"name": h.get("content", "")[:40], "streak": 0} for h in habits if h.get("memory_type") == "habit"]
+
+        return {
+            "name": name,
+            "active_goals": len(active_goals),
+            "habits": habit_list[:3],
+        }
     except Exception:
         return None
 
@@ -165,13 +186,14 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
     session = await session_service.create_session(
         app_name="jazari",
         user_id=userId,
+        state={"user_id": userId},
     )
 
     # Send initial greeting
     try:
         greeting_content = types.Content(
             role="user",
-            parts=[types.Part.from_text(text="I just connected. Greet me briefly and check if you remember anything about me using search_memory.")],
+            parts=[types.Part.from_text(text="I just connected. Use search_memory to check if you have any memories about me. If you find memories, greet me by name and follow up on my goals. If you find NOTHING, I am a new user — start the onboarding flow: introduce yourself and ask my name. Do NOT invent or hallucinate any memories.")],
         )
         greeting_response = ""
         async for event in text_runner.run_async(
@@ -188,8 +210,9 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
                 "content": greeting_response,
                 "agent": "jazari",
             })
-    except Exception:
-        pass  # Don't block on greeting failure
+    except Exception as e:
+        print(f"[text] Greeting error: {type(e).__name__}: {e}")
+        import traceback; traceback.print_exc()
 
     try:
         while True:
@@ -246,7 +269,9 @@ async def websocket_text(websocket: WebSocket, userId: str = "anonymous"):
                         if event.is_final_response() and event.content and event.content.parts:
                             response_text = event.content.parts[0].text or ""
                             agent_name = event.author
-                except Exception:
+                except Exception as e:
+                    print(f"[text] Agent error: {type(e).__name__}: {e}")
+                    import traceback; traceback.print_exc()
                     response_text = "Sorry, I encountered an issue. Please try again."
                     agent_name = "jazari"
 
@@ -309,9 +334,10 @@ async def websocket_audio(websocket: WebSocket, userId: str = "anonymous"):
 
     from server.audio_bridge import AudioBridge
 
-    session = await session_service.create_session(app_name="jazari", user_id=userId)
+    session = await session_service.create_session(app_name="jazari", user_id=userId, state={"user_id": userId})
     bridge = AudioBridge(runner=runner, user_id=userId, session_id=session.id)
     event_task = None
+    voice_transcripts: list[tuple[str, str]] = []  # (sender, text) for auto-save
 
     try:
         async def on_audio(data: bytes):
@@ -320,9 +346,17 @@ async def websocket_audio(websocket: WebSocket, userId: str = "anonymous"):
             except Exception:
                 pass  # WebSocket may have closed
 
-        async def on_transcript(text: str):
+        async def on_transcript(text: str, sender: str = "user", finished: bool = True):
             try:
-                await websocket.send_json({"type": "transcript", "content": text})
+                await websocket.send_json({
+                    "type": "transcript",
+                    "content": text,
+                    "sender": sender,
+                    "finished": finished,
+                })
+                # Collect finished transcripts for auto-save
+                if finished and text.strip():
+                    voice_transcripts.append((sender, text.strip()))
             except Exception:
                 pass
 
@@ -352,6 +386,32 @@ async def websocket_audio(websocket: WebSocket, userId: str = "anonymous"):
         if event_task:
             event_task.cancel()
         await bridge.close()
+
+        # Auto-save voice conversation to memory
+        if voice_transcripts:
+            try:
+                from memory.store import MemoryStore
+                store = MemoryStore()
+                user_lines = [t for s, t in voice_transcripts if s == "user"]
+                jazari_lines = [t for s, t in voice_transcripts if s == "jazari"]
+                summary = f"Voice conversation: User said: {' | '.join(user_lines[:5])}. Jazari responded about: {' | '.join(jazari_lines[:3])}"
+                await store.store(
+                    user_id=userId,
+                    content=summary[:500],
+                    memory_type="insight",
+                )
+                # Also store individual important user statements
+                for line in user_lines:
+                    if len(line) > 15:  # Skip very short utterances
+                        await store.store(
+                            user_id=userId,
+                            content=line,
+                            memory_type="fact",
+                        )
+                print(f"[audio] Auto-saved {len(user_lines)} voice memories for {userId}")
+            except Exception as e:
+                print(f"[audio] Auto-save failed: {e}")
+
         print(f"[audio] Session cleaned up")
 
 

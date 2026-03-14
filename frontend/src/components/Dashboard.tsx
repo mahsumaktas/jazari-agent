@@ -18,10 +18,16 @@ export function Dashboard({ done, missed, userId }: Props) {
 
   useEffect(() => {
     const base = `${window.location.protocol}//${window.location.host}`
-    fetch(`${base}/api/memories/${userId}?limit=5`)
-      .then(r => r.json())
-      .then(data => setMemories(data.memories || []))
-      .catch(() => {})
+    const fetchMemories = () => {
+      fetch(`${base}/api/memories/${userId}?limit=5`)
+        .then(r => r.json())
+        .then(data => setMemories(data.memories || []))
+        .catch(() => {})
+    }
+    fetchMemories()
+    // Refresh every 15s to catch new memories from conversation
+    const interval = setInterval(fetchMemories, 15000)
+    return () => clearInterval(interval)
   }, [userId])
 
   const typeIcon = (type: string) => {

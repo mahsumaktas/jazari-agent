@@ -1,10 +1,16 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 
-type Message = { type: string; content: string }
+export type TranscriptMessage = {
+  content: string
+  sender: 'user' | 'jazari'
+  timestamp: string
+}
 
 export function useWebSocket(userId: string) {
   const [isConnected, setIsConnected] = useState(false)
-  const [transcripts, setTranscripts] = useState<Message[]>([])
+  const [transcripts, setTranscripts] = useState<TranscriptMessage[]>([])
+  const [partialUser, setPartialUser] = useState('')
+  const [partialJazari, setPartialJazari] = useState('')
   const wsRef = useRef<WebSocket | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const workletNodeRef = useRef<AudioWorkletNode | null>(null)
@@ -23,6 +29,10 @@ export function useWebSocket(userId: string) {
 
     audioCtxRef.current = ctx
     workletNodeRef.current = workletNode
+  }
+
+  function formatTimestamp(): string {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
   const connect = useCallback(() => {
@@ -51,7 +61,23 @@ export function useWebSocket(userId: string) {
         try {
           const msg = JSON.parse(event.data)
           if (msg.type === 'transcript') {
-            setTranscripts(prev => [...prev, msg])
+            const sender = msg.sender === 'jazari' ? 'jazari' : 'user'
+            const finished = msg.finished !== false
+
+            if (finished) {
+              // Final transcript — add to history, clear partial
+              setTranscripts(prev => [...prev, {
+                content: msg.content,
+                sender,
+                timestamp: formatTimestamp(),
+              }])
+              if (sender === 'user') setPartialUser('')
+              else setPartialJazari('')
+            } else {
+              // Partial — update live preview
+              if (sender === 'user') setPartialUser(msg.content)
+              else setPartialJazari(msg.content)
+            }
           }
         } catch { /* ignore non-JSON */ }
       }
@@ -96,5 +122,5 @@ export function useWebSocket(userId: string) {
     audioCtxRef.current?.close()
   }, [])
 
-  return { isConnected, transcripts, connect, disconnect, sendAudio, setTranscripts }
+  return { isConnected, transcripts, partialUser, partialJazari, connect, disconnect, sendAudio, setTranscripts }
 }

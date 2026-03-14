@@ -10,7 +10,7 @@ from google import genai
 from memory.scoring import score_importance
 from memory.forgetting import effective_importance, FORGET_THRESHOLD
 
-EMBEDDING_MODEL = "gemini-embedding-exp-03-07"
+EMBEDDING_MODEL = "gemini-embedding-2-preview"
 EMBEDDING_DIM = 768
 TABLE_NAME = "memories"
 

@@ -1,5 +1,6 @@
 """Memory tools for Jazari agents — semantic search via MemoryStore."""
 
+from google.adk.tools import ToolContext
 from memory.store import MemoryStore
 
 _store: MemoryStore | None = None
@@ -12,17 +13,17 @@ def _get_store() -> MemoryStore:
     return _store
 
 
-async def store_memory(user_id: str, memory_type: str, content: str) -> dict:
+async def store_memory(memory_type: str, content: str, tool_context: ToolContext = None) -> dict:
     """Store a new memory about the user with automatic importance scoring.
 
     Args:
-        user_id: The user's unique identifier.
-        memory_type: One of: fact, goal, event, preference, insight.
+        memory_type: One of: fact, goal, event, preference, insight, habit.
         content: The memory content (e.g., "User's name is Mehmet").
 
     Returns:
         dict with memory_id and confirmation message.
     """
+    user_id = tool_context.user_id if tool_context else "anonymous"
     try:
         store = _get_store()
         return await store.store(
@@ -34,17 +35,17 @@ async def store_memory(user_id: str, memory_type: str, content: str) -> dict:
         return {"error": f"Failed to store memory: {type(e).__name__}", "message": "I'll remember this for now but couldn't persist it."}
 
 
-async def search_memory(user_id: str, query: str, limit: int = 5) -> dict:
+async def search_memory(query: str, limit: int = 5, tool_context: ToolContext = None) -> dict:
     """Search user's memories using semantic similarity.
 
     Args:
-        user_id: The user's unique identifier.
         query: Natural language search query.
         limit: Maximum number of results.
 
     Returns:
         dict with matching memories ranked by relevance and importance.
     """
+    user_id = tool_context.user_id if tool_context else "anonymous"
     try:
         store = _get_store()
         results = await store.search(user_id=user_id, query=query, limit=limit)
@@ -61,19 +62,7 @@ async def store_media_memory(
     modality: str,
     media_uri: str = "",
 ) -> dict:
-    """Store a photo or voice note memory with multimodal embedding.
-
-    Args:
-        user_id: The user's unique identifier.
-        memory_type: visual or audio.
-        content: Optional text description.
-        media_bytes: Raw image (JPEG) or audio (WAV) bytes.
-        modality: image or audio.
-        media_uri: GCS URI if media was uploaded.
-
-    Returns:
-        dict with memory_id and generated description.
-    """
+    """Store a photo or voice note memory with multimodal embedding."""
     try:
         store = _get_store()
         return await store.store(
@@ -88,17 +77,15 @@ async def store_media_memory(
         return {"error": f"Failed to store media memory: {type(e).__name__}", "message": "Media received but couldn't persist it."}
 
 
-async def get_decaying_goals(user_id: str) -> dict:
+async def get_decaying_goals(tool_context: ToolContext = None) -> dict:
     """Find goals and habits the user hasn't mentioned recently.
 
     Used for proactive coaching: follow up on forgotten goals.
 
-    Args:
-        user_id: The user's unique identifier.
-
     Returns:
         dict with decaying goals/habits and days since last mention.
     """
+    user_id = tool_context.user_id if tool_context else "anonymous"
     try:
         store = _get_store()
         decaying = await store.get_decaying_goals(user_id=user_id)
@@ -107,17 +94,17 @@ async def get_decaying_goals(user_id: str) -> dict:
         return {"decaying_goals": [], "count": 0}
 
 
-async def save_conversation_summary(user_id: str, summary: str, key_points: str) -> dict:
+async def save_conversation_summary(summary: str, key_points: str, tool_context: ToolContext = None) -> dict:
     """Save a conversation summary at the end of a session.
 
     Args:
-        user_id: The user's unique identifier.
         summary: 1-2 sentence summary of the conversation.
         key_points: Comma-separated key points discussed.
 
     Returns:
         dict with confirmation.
     """
+    user_id = tool_context.user_id if tool_context else "anonymous"
     try:
         store = _get_store()
         return await store.store(
@@ -130,16 +117,8 @@ async def save_conversation_summary(user_id: str, summary: str, key_points: str)
 
 
 def get_user_profile(user_id: str) -> dict:
-    """Get a summary of everything known about the user.
-
-    Args:
-        user_id: The user's unique identifier.
-
-    Returns:
-        dict with user profile from Firestore.
-    """
+    """Get a summary of everything known about the user."""
     from tools.firestore_client import get_user_ref
-    from google.cloud import firestore
 
     user_ref = get_user_ref(user_id)
     profile_doc = user_ref.get()

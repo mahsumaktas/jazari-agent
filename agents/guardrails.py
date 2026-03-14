@@ -1,6 +1,5 @@
 """Guardrails — safety callbacks for Jazari agents (ADK best practice)."""
 
-from google.adk.agents.callback_context import CallbackContext
 from google.genai import types
 
 BLOCKED_TOPICS = [
@@ -15,19 +14,24 @@ SAFETY_RESPONSE = (
 )
 
 
-async def safety_guardrail(
-    callback_context: CallbackContext,
-) -> types.Content | None:
+async def safety_guardrail(callback_context, **kwargs) -> types.Content | None:
     """Check user messages for crisis/safety topics before model processes them.
 
     Returns None to proceed normally, or a Content object to short-circuit.
     """
-    invocation = callback_context.invocation_context
-    if not invocation or not invocation.user_content:
+    # Try both public and private attribute names for ADK compatibility
+    invocation = getattr(callback_context, 'invocation_context', None) or \
+                 getattr(callback_context, '_invocation_context', None)
+
+    if not invocation:
+        return None
+
+    user_content = getattr(invocation, 'user_content', None)
+    if not user_content or not user_content.parts:
         return None
 
     user_text = ""
-    for part in invocation.user_content.parts:
+    for part in user_content.parts:
         if hasattr(part, "text") and part.text:
             user_text += part.text.lower()
 

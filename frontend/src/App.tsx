@@ -21,7 +21,7 @@ function App() {
   })
 
   const { isRecording, analyserNode, start: startAudio, stop: stopAudio } = useAudio()
-  const { isConnected, transcripts, connect, disconnect, sendAudio } = useWebSocket(userId)
+  const { isConnected, transcripts, partialUser, partialJazari, connect, disconnect, sendAudio } = useWebSocket(userId)
   const textChat = useTextChat(userId)
   const [mode, setMode] = useState<'voice' | 'text'>('voice')
   const [profile, setProfile] = useState(null)
@@ -32,11 +32,16 @@ function App() {
 
   useEffect(() => {
     const base = `${window.location.protocol}//${window.location.host}`
-    fetch(`${base}/api/profile/${userId}`).then(r => r.json()).then(setProfile).catch(() => {})
-    fetch(`${base}/api/habits/${userId}`).then(r => r.json()).then(data => {
-      setTodayDone(data.done || [])
-      setTodayMissed(data.missed || [])
-    }).catch(() => {})
+    const fetchProfile = () => {
+      fetch(`${base}/api/profile/${userId}`).then(r => r.json()).then(setProfile).catch(() => {})
+      fetch(`${base}/api/habits/${userId}`).then(r => r.json()).then(data => {
+        setTodayDone(data.done || [])
+        setTodayMissed(data.missed || [])
+      }).catch(() => {})
+    }
+    fetchProfile()
+    const interval = setInterval(fetchProfile, 15000)
+    return () => clearInterval(interval)
   }, [userId])
 
   useEffect(() => {
@@ -216,7 +221,7 @@ function App() {
             )}
 
             <div className="w-full max-w-lg mt-8">
-              <Transcript messages={transcripts} />
+              <Transcript messages={transcripts} partialUser={partialUser} partialJazari={partialJazari} />
             </div>
           </>
         ) : (
