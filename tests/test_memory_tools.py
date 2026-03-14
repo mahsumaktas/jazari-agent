@@ -4,6 +4,13 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
 
+def _make_tool_context(user_id="u1"):
+    """Create a mock ToolContext with user_id."""
+    ctx = MagicMock()
+    ctx.user_id = user_id
+    return ctx
+
+
 async def test_store_memory_success():
     """store_memory should return result from MemoryStore."""
     mock_store = MagicMock()
@@ -17,7 +24,7 @@ async def test_store_memory_success():
 
     with patch("tools.memory_tools._get_store", return_value=mock_store):
         from tools.memory_tools import store_memory
-        result = await store_memory(user_id="u1", memory_type="fact", content="User's name is Ali")
+        result = await store_memory(memory_type="fact", content="User's name is Ali", tool_context=_make_tool_context())
 
     assert result["memory_id"] == "test-123"
     assert result["importance"] == 0.9
@@ -30,7 +37,7 @@ async def test_store_memory_error_handling():
 
     with patch("tools.memory_tools._get_store", return_value=mock_store):
         from tools.memory_tools import store_memory
-        result = await store_memory(user_id="u1", memory_type="fact", content="test")
+        result = await store_memory(memory_type="fact", content="test", tool_context=_make_tool_context())
 
     assert "error" in result
     assert "ConnectionError" in result["error"]
@@ -45,7 +52,7 @@ async def test_search_memory_success():
 
     with patch("tools.memory_tools._get_store", return_value=mock_store):
         from tools.memory_tools import search_memory
-        result = await search_memory(user_id="u1", query="hobbies")
+        result = await search_memory(query="hobbies", tool_context=_make_tool_context())
 
     assert result["count"] == 1
     assert result["memories"][0]["content"] == "User likes running"
@@ -58,7 +65,7 @@ async def test_search_memory_error_returns_empty():
 
     with patch("tools.memory_tools._get_store", return_value=mock_store):
         from tools.memory_tools import search_memory
-        result = await search_memory(user_id="u1", query="anything")
+        result = await search_memory(query="anything", tool_context=_make_tool_context())
 
     assert result["count"] == 0
     assert result["memories"] == []
@@ -71,7 +78,7 @@ async def test_get_decaying_goals_error_returns_empty():
 
     with patch("tools.memory_tools._get_store", return_value=mock_store):
         from tools.memory_tools import get_decaying_goals
-        result = await get_decaying_goals(user_id="u1")
+        result = await get_decaying_goals(tool_context=_make_tool_context())
 
     assert result["count"] == 0
     assert result["decaying_goals"] == []
@@ -85,9 +92,9 @@ async def test_save_conversation_summary():
     with patch("tools.memory_tools._get_store", return_value=mock_store):
         from tools.memory_tools import save_conversation_summary
         result = await save_conversation_summary(
-            user_id="u1",
             summary="Discussed career goals",
             key_points="promotion, skills, timeline",
+            tool_context=_make_tool_context(),
         )
 
     assert result["memory_id"] == "sum-1"

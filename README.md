@@ -134,7 +134,7 @@ gcloud builds submit --config cloudbuild.yaml
 
 ## Demo
 
-[Watch the demo video →](TODO)
+[Watch the demo video →](https://youtu.be/TODO)
 
 ## License
 
