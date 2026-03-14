@@ -65,12 +65,18 @@ export function useWebSocket(userId: string) {
             const finished = msg.finished !== false
 
             if (finished) {
-              // Final transcript — add to history, clear partial
-              setTranscripts(prev => [...prev, {
-                content: msg.content,
-                sender,
-                timestamp: formatTimestamp(),
-              }])
+              // Final transcript — add to history, skip duplicates
+              setTranscripts(prev => {
+                const last = prev[prev.length - 1]
+                if (last && last.sender === sender && last.content === msg.content) {
+                  return prev // skip duplicate
+                }
+                return [...prev, {
+                  content: msg.content,
+                  sender,
+                  timestamp: formatTimestamp(),
+                }]
+              })
               if (sender === 'user') setPartialUser('')
               else setPartialJazari('')
             } else {
